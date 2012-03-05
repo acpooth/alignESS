@@ -1,0 +1,240 @@
+#!/usr/bin/python
+# 
+#
+# @uthor: acph
+#  
+
+"""Program to align a pair of enzimatic step sequences  using an implementation of the Needleman-Wuncsh  dynamic programing algorithm """
+
+from numpy import zeros, arange, random, sign, mean, ones
+import re
+
+
+def scoring (mat, alp, seq1, seq2, gap=1, fhomo=0.95, fpengap=0.05):
+    """ This function evaluates an enzymatic step sequences pair alignment. The sequences need to be aligned. This function tries to recall the fitness function in Ortegon-Cano, 2011. 
+    
+    Arguments:
+    - `mat`: score matrix
+    - `alp`: alphabeth, index of score matrix
+    - `s1`: enzimatic step sequence 1, ':' delimited
+    - `s2`: enzimatic step sequence 2, ':' delimited
+    - `gap`: gap penalization
+    - `fhomo`: Weight factor to multiplicate the homogeneity fraction of score
+    - `fpengap`: Weight factor to multiplicate the gap penalization
+    """
+    s1 = seq1.strip(' :\n')
+    s2 = seq2.strip(' :\n')
+    s1 = s1.split(":")
+    s2 = s2.split(":")
+    if len(s1) != len(s2):
+        print 'The sequences aligned must be of the same length'
+        exit
+    length = len(s1) # Alignment length
+    
+    # -- Mean column homogeneity evaluation
+    homo_col = []
+    for i in range(length):
+        if s1[i] == '-.-.-' or s2[i] == '-.-.-' : # and s1[i] != s2[1]:
+            homo_col.append(gap)
+        elif s1[i] == '...' or s2[i] == '...':
+            pass
+        elif s1[i] == '' or s2[i] == '':
+            pass
+        else:
+            x = alp.index(s1[i])
+            y = alp.index(s2[i])
+            homo_col.append( mat[x, y]  ) # pondered by 0.6 as in
+# Ortegon-Cano 2011.This value is taken from the multiple alignment AG
+    homo = mean(homo_col)
+
+    # -- Column increment penalization > here isnt necesary
+
+    # -- Gap penalization
+    seq1 = seq1.strip('.-:') # remove initial and final gaps
+    seq2 = seq2.strip('.-:')
+    gap = re.compile(r"(:-.-.-)+") # gap regex
+
+    # gaps = [] # count of gaps blocks,
+    # # lenght = number of blocks in alignment
+    # # sum = number of individual gaps in the alignment
+    # for seq in (seq1,seq2):
+    #     for g in gap.finditer(seq):
+    #         g = g.group()
+    #         g_lenght = g.count("-.-.-")
+    #         gaps.append(g_lenght)
+    # total_gaps = sum(gaps)
+    # total_blocks = len(gaps)
+    # pengap = float(total_gaps)/total_blocks/total_gaps
+    # #to minimize
+    # pengap = 1 - pengap
+
+
+    ## alt
+    gaps = 0
+    for s in (seq1,seq2):
+        sgaps = []
+        for g in gap.finditer(s):
+            g = g.group()
+            g_lenght = g.count("-.-.-")
+            sgaps.append(g_lenght)
+        if sgaps == []:
+            gaps += 0
+        else:
+            gaps += float(len(sgaps))/sum(sgaps)
+    pengap = gaps /  2
+
+    # Final score calculation
+    
+    score = (homo * fhomo) + (pengap * fpengap)
+    return score
+
+
+def diagonal_list(l1, l2):
+    """Creates a list of diagonals in a matrix. Index begin = 1. Used to facilitate the calculation of the scoring and arrow matrices.
+    
+    Arguments:
+    - `l1`: lenght of sequence 1
+    - `l2`: lenght of sequence 2
+    """
+    dlist = []
+    for i in range(l1 + l2 - 1):
+        st1 = min(i+1, l1)
+        sp1 = max(1, i-l2+2)
+        st2 = max(1, i-l1+2)
+        sp2 = min(i+1, l2)
+#        print st1,sp1,st2,sp2
+        dlist.append( (arange(st1,sp1-1,-1), arange(st2,sp2+1)) )
+    return dlist
+
+    
+def FastSubValues(mat, alp, s1, s2):
+    """Creates a matrix with the same dimentions of scoring matrix and arrow matrix that contains the precomputed values of the alignment of each comparation in both sequences.
+    
+    Arguments:
+    - `mat`: substitution matrix
+    - `alp`: alphabeth list, index of the subvalue matrix
+    - `s1`: enzimatic step sequence 1, ':' delimited
+    - `s2`: enzimatic step sequence 2, ':' delimited
+    """
+    s1 = s1.strip(': \n')
+    s2 = s2.strip(': \n')
+    s1 = s1.split(':')
+    s2 = s2.split(':')
+#    alp = tuple(alp)
+    l1, l2 = len(s1), len(s2)
+    subvals = zeros((l1+1, l2+1)) # substitution values matrix
+    # Convert the sequences to sequences of index
+    si1 = zeros(l1, int)
+    si2 = zeros(l2, int)
+    for i in range(l1):
+        si1[i] = alp.index(s1[i])
+    for i in range(l2):
+        si2[i] = alp.index(s2[i])
+    # Fills subvalue matrix, this initiates in the position (1,1)
+    # similar, to scoring and arrow matrices
+    for i in range(1, l1+1):
+        subvals[i,1:] = mat[ [si1[i-1]]*l2 , si2 ]
+    return subvals
+
+
+def FastNW(subvals, s1, s2, gap=0.9):
+    """Perform dynamic programing alignment of EC numbers sequences. Creates the scoring and arrow matrices using subvals matrix and diagonal arrays.
+
+    Returns the dynamic programing matrix and the arrow matrix used to trace back the alignment.
+    
+    Arguments:
+    - `subvals`: matrix of precomputed values for the alignment of each pair of characters
+    - `s1`: enzymatic step sequence 1, ':' delimited
+    - `s2`: enzymatic step sequence 2, ':' delimited
+    - `gap`: gap penalties, default = 1
+    """
+    s1 = s1.strip(': \n')
+    s2 = s2.strip(': \n')
+    s1 = s1.split(':')
+    s2 = s2.split(':')
+    l1, l2 = len(s1), len(s2)
+    # Create the score and aroow matrices
+    scoremat = zeros((l1+1, l2+1))
+    arrow = zeros((l1+1, l2+1))
+    # Create first row and first column with gaps
+    scoremat[0] = arange(l2+1) * gap
+    scoremat[:,0] = arange(l1+1) * gap
+    arrow[0] = ones(l2+1)
+    # Compute diagonal list
+    dlist = diagonal_list(l1,l2)
+    # fill the matrix
+    for i in dlist:
+        li = len(i[0])
+        f = zeros( (3, li) ) # results of the tree posibles xhoices
+# for each  value in the diagonal
+        x, y = i[0] , i[1]
+        f[0] = scoremat[x-1, y] + gap 
+        f[1] = scoremat[x, y-1] + gap
+        f[2] = scoremat[x-1, y-1] + subvals[i]
+        f -= 0.001 * sign(f) * random.ranf( f.shape) # for randomly
+# select from a tie
+        mini = f.min(0)
+        minpos = f.argmin(0)
+        scoremat[i] = mini
+        arrow[i] = minpos
+    return scoremat, arrow
+
+def backtrace(arrow, s1, s2):
+    """Reads the arrow matrix and return the aligned sequences. Global, N-W
+    
+    Arguments:
+    - `arrow`: arrow matrix generated by dynamic programing
+    - `s1`: enzymatic step sequence, ':' delimited
+    - `s2`: enzymatic step sequence, ':' delimited
+    """
+    # Transform the sequences strings into EC numbers lists
+    s1 = s1.strip(': \n')
+    s2 = s2.strip(': \n')
+    s1 = s1.split(':') 
+    s2 = s2.split(':')
+    st1, st2 = [], [] # aligned sequences
+    ok = True
+    v, h = arrow.shape
+    v -= 1 ; h -= 1
+    while ok:
+        if arrow[v,h] == 0: # vertical best result, s1
+            st1.append(s1[v-1])
+            st2.append('-.-.-')
+            v -= 1
+        elif arrow[v,h] == 1: # horizontal best result, s2
+            st1.append('-.-.-')
+            st2.append(s2[h-1])
+            h -= 1
+        elif arrow[v,h] == 2: # diagonal best result, s1,s2 aligned
+            st1.append(s1[v-1])
+            st2.append(s2[h-1])
+            v -= 1 ; h -= 1
+        if v == 0 and h == 0:
+            ok = False
+    # reverse sequences
+    st1 = ':'.join(st1[::-1])
+    st2 = ':'.join(st2[::-1])
+    return st1, st2
+
+
+def NW(mat,ecs,s1,s2,gap=0.9):
+    """
+    NW alignment function. Creates a pairwise alignment using a Needelman-Wunsh algorithm.
+
+    Arguments:
+    - `mat`: EC number (3 levels) substitution matrix
+    - `ecs`: List of ec numbers that represent the labels of the matrix
+    - `s1`: EC numbers sequence 1, : delimited
+    - `s2`: EC numbers sequence 2, : delimited
+    - `gap`: gap penalty 
+    """
+    submat = FastSubValues(mat, ecs, s1, s2) # create sub score matrix
+    sco, arr = FastNW (submat, s1, s2, gap=gap) # create score and
+# arrow matrices
+    s1, s2 = backtrace(arr, s1,s2) # backtrace alingment
+    # scoring
+    score = scoring(mat,ecs,s1,s2)
+    return s1, s2, score
+
+
+
