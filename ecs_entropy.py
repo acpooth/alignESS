@@ -83,3 +83,38 @@ def build_entropy_matrix(ecs_list, function=0):
             
     return matrix
     
+def save_matrix(sub_matrix, ecs_list, filename):
+    """Saves de substitution matrix into a numpy binary file (.npz)
+    
+    Arguments:
+    - `sub_matrix`: EC entropy based substitution matrix 
+    - `ecs_list`: List of EC numbers included in the matrix, index referenced un the matrix
+    - `filename`: Name of file to store matrix
+    """
+    from numpy import savez
+    savez(filename, matrix=sub_matrix, ecs=ecs_list)
+
+
+if __name__ == '__main__':
+    """  Creates the files containing the Entropy-based ECs substitution matrices. One that takes into account the hierarchy of EC numbers and other that do not take this considerations
+
+USE: $python ecs_entropy.py [sqlite3 database file]
+    
+"""
+    from getEC3fromDB import EClist
+    import sqlite3 as s3
+    from sys import argv
+    
+
+    db = s3.connect(argv[1])
+
+    ecs = EClist(db)
+
+    # No hierarchy
+    mat = build_entropy_matrix(ecs, function=0)
+    # Hierarchy
+    hmat = build_entropy_matrix(ecs, function=1)
+
+    #sabe matrices
+    save_matrix(mat, ecs, 'entropy_matrix')
+    save_matrix(hmat, ecs, 'entropy_matrix_hierarchy')
