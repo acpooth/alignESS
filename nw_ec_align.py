@@ -54,7 +54,7 @@ def scoring (mat, alp, seq1, seq2, gap=1, fhomo=0.95, fpengap=0.05, local=False)
             if s1[i] != '-.-.-' and s2[i] != '-.-.-':
                 break
             fi = i      # final index
-            
+        # trimming the sequences
         s1 = s1[ii:fi]
         s2 = s2[ii:fi]
 
@@ -229,7 +229,7 @@ def backtrace(arrow, s1, s2):
     return st1, st2
 
 
-def NW(mat,ecs,s1,s2,gap=0.9, local=False, localize=False, mini=False):
+def NW(mat,ecs,s1,s2,gap=0.9, local=False, localize=False, nws=False):
     """
     NW alignment function. Creates a pairwise alignment using a Needelman-Wunsh algorithm.
 
@@ -241,7 +241,7 @@ def NW(mat,ecs,s1,s2,gap=0.9, local=False, localize=False, mini=False):
     - `gap`: gap penalty
     - `local`: if local = True, then the score of the alignment is calculated localy, i.e. only en the part of the alignment covered by the shortest sequence
     - `localize`: if localize = True, then, the function returns only the fragment of the alignment covered by the shortest sequence
-    - `mini`: if true, the function returns the scores as is returned by the NW algorithm
+    - `nws`: if true, the function returns the scores as is returned by the NW algorithm
     """
     submat = FastSubValues(mat, ecs, s1, s2) # create sub score matrix
     sco, arr, mini = FastNW (submat, s1, s2, gap=gap) # create score and
@@ -250,7 +250,7 @@ def NW(mat,ecs,s1,s2,gap=0.9, local=False, localize=False, mini=False):
     # scoring : the scoring is doing using the entropy schema to
     # normalize the score in a range 0 to 1 and to generate similar
     # results to the genetic algorithm
-    if mini:                    # NW score
+    if nws:                    # NW score
         if localize:
             s1 = s1.split(':')
             s2 = s2.split(':')
@@ -270,7 +270,7 @@ def NW(mat,ecs,s1,s2,gap=0.9, local=False, localize=False, mini=False):
             s2 = s2[ii:fi]
             s1 = ':'.join(s1)
             s2 = ':'.join(s2)
-        return s1, s2, mini 
+        return s1, s2, mini[0]
     scoring_gap = 1
     score = scoring(mat,ecs,s1,s2, gap=scoring_gap, local=local)
     if localize:
