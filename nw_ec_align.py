@@ -14,11 +14,12 @@ fol = __file__.split('/')
 fol = '/'.join(fol[:-1])
 #fol = './'
 mat = load(fol + '/entropy_matrix.npz')
-ecs = mat['ecs']
 mat = mat['matrix']
 
 hmat = load(fol + '/entropy_matrix_hierarchy.npz')
+ecs = hmat['ecs']
 hmat = hmat['matrix']
+
 
 # -- End load matrices
 
