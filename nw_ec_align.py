@@ -1,20 +1,24 @@
 #!/usr/bin/python
 # 
 #
-# @uthor: acph
+# @uthor: acph (dragopoot@gmail.com)
 #  
 
 """Program to align a pair of enzimatic step sequences  using an implementation of the Needleman-Wuncsh  dynamic programing algorithm """
 
+import argparse
 from numpy import zeros, arange, random, sign, mean, ones, load
 import re
 
+
 # Load matrices
 fol = __file__.split('/')       
-fol = '/'.join(fol[:-1])
-#fol = './'
-mat = load(fol + '/entropy_matrix.npz')
-mat = mat['matrix']
+if len(fol) == 1:
+    fol = '.'
+else:
+    fol = '/'.join(fol[:-1])    
+#mat = load(fol + '/entropy_matrix.npz')
+#mat = mat['matrix']
 
 hmat = load(fol + '/entropy_matrix_hierarchy.npz')
 ecs = hmat['ecs']
@@ -405,5 +409,23 @@ def NW_l(mat,ecs,s1,s2,gap=0.9):
     return s1, s2, score #, mini # uncoment mini to show the score
 # frome the scoring matrix
 
+def arg_parser():
+    parser = argparse.ArgumentParser(description='Needleman-Wuncsh algorithm for alignment of ESS (Enzymatic Step Sequence)')
+    parser.add_argument('ess1', type=str, help='Sequence of 3 levels EC numbers. Colon separated. (1.2.3:3.5.-:...:9.9.9)')
+    parser.add_argument('ess2', type=str, help='Sequence of 3 levels EC numbers. Colon separated. (1.2.3:3.5.-:...:9.9.9)')
+    parser.add_argument('--gap', type=float, default=0.9, help='Gap penalization (from 0 to 1). Default = 0.9')
+    args = parser.parse_args()
+    return args
+
 if __name__ == '__main__':
-    pass
+    from sys import stdout
+
+    args = arg_parser()
+    ecs = list(ecs)
+    result = NW(hmat, ecs, args.ess1, args.ess2, gap=args.gap)
+
+    stdout.write('ess1:\t{}\n'.format(result[0]))
+    stdout.write('ess2:\t{}\n'.format(result[1]))
+    stdout.write('score = {}\n'.format(result[2]))
+    
+    
