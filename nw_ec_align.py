@@ -40,8 +40,8 @@ def scoring (mat, alp, seq1, seq2, gap=1, fhomo=0.95, fpengap=0.05, local=False)
     - `fpengap`: Weight factor to multiplicate the gap penalization
     - `local`: If True, evaluates the score in a local fassion, rather than global, i.e.  eliminates from the alignment the initial and final gaps of the shortest sequence and the respective positions in the largest sequence.
     """
-    s1 = seq1.strip(' :\n')
-    s2 = seq2.strip(' :\n')
+    s1 = seq1.strip(' :\n\r')
+    s2 = seq2.strip(' :\n\r')
     s1 = s1.split(":")
     s2 = s2.split(":")
     assert len(s1) == len(s2) , 'The sequences aligned must be of the same length'
@@ -133,8 +133,8 @@ def FastSubValues(mat, alp, s1, s2):
     - `s1`: enzimatic step sequence 1, ':' delimited
     - `s2`: enzimatic step sequence 2, ':' delimited
     """
-    s1 = s1.strip(': \n')
-    s2 = s2.strip(': \n')
+    s1 = s1.strip(': \n\r')
+    s2 = s2.strip(': \n\r')
     s1 = s1.split(':')
     s2 = s2.split(':')
 #    alp = tuple(alp)
@@ -165,8 +165,8 @@ def FastNW(subvals, s1, s2, gap=0.9):
     - `s2`: enzymatic step sequence 2, ':' delimited
     - `gap`: gap penalties, default = 1
     """
-    s1 = s1.strip(': \n')
-    s2 = s2.strip(': \n')
+    s1 = s1.strip(': \n\r')
+    s2 = s2.strip(': \n\r')
     s1 = s1.split(':')
     s2 = s2.split(':')
     l1, l2 = len(s1), len(s2)
@@ -205,8 +205,8 @@ def backtrace(arrow, s1, s2):
     - `s2`: enzymatic step sequence, ':' delimited
     """
     # Transform the sequences strings into EC numbers lists
-    s1 = s1.strip(': \n')
-    s2 = s2.strip(': \n')
+    s1 = s1.strip(': \n\r')
+    s2 = s2.strip(': \n\r')
     s1 = s1.split(':') 
     s2 = s2.split(':')
     st1, st2 = [], [] # aligned sequences
