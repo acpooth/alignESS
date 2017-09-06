@@ -7,7 +7,8 @@
 """Program to align a pair of enzimatic step sequences  using an implementation of the Needleman-Wuncsh  dynamic programing algorithm """
 
 import argparse
-from numpy import zeros, arange, random, sign, mean, ones, load
+from numpy import zeros, arange, random, sign, mean, ones, load, uint16, array
+import numpy as np
 import re
 
 
@@ -23,9 +24,13 @@ else:
 hmat = load(fol + '/entropy_matrix_hierarchy.npz')
 ecs = hmat['ecs']
 hmat = hmat['matrix']
-
+lecs = list(ecs)
+decs = {}
+for i, v in enumerate(lecs):
+    decs[v] = i
 
 # -- End load matrices
+
 
 def scoring(mat, alp, seq1, seq2, gap=1, fhomo=0.95, fpengap=0.05, local=False):
     """ This function evaluates an enzymatic step sequences pair alignment. The sequences need to be aligned. This function tries to recall the fitness function in Ortegon-Cano, 2011. 
@@ -108,7 +113,8 @@ def scoring(mat, alp, seq1, seq2, gap=1, fhomo=0.95, fpengap=0.05, local=False):
 
 
 def diagonal_list(l1, l2):
-    """Creates a list of diagonals in a matrix. Index begin = 1. Used to facilitate the calculation of the scoring and arrow matrices.
+    """Creates a list of diagonals in a matrix. Index begin = 1. Used to
+    facilitate the calculation of the scoring and arrow matrices.
 
     Arguments:
     - `l1`: lenght of sequence 1
@@ -120,9 +126,28 @@ def diagonal_list(l1, l2):
         sp1 = max(1, i - l2 + 2)
         st2 = max(1, i - l1 + 2)
         sp2 = min(i + 1, l2)
-#        print st1,sp1,st2,sp2
+        # print st1,sp1,st2,sp2
         dlist.append((arange(st1, sp1 - 1, -1), arange(st2, sp2 + 1)))
     return dlist
+
+
+def _diagonal_list(l1, l2):
+    """Creates a list of diagonals in a matrix. Index begin = 1. Used to
+    facilitate the calculation of the scoring and arrow matrices.
+
+    Generator version
+
+    Arguments:
+    - `l1`: lenght of sequence 1
+    - `l2`: lenght of sequence 2
+    """
+    for i in range(l1 + l2 - 1):
+        st1 = min(i + 1, l1)
+        sp1 = max(1, i - l2 + 2)
+        st2 = max(1, i - l1 + 2)
+        sp2 = min(i + 1, l2)
+        # print st1,sp1,st2,sp2
+        yield (arange(st1, sp1 - 1, -1), arange(st2, sp2 + 1))
 
 
 def FastSubValues(mat, alp, s1, s2):
@@ -152,6 +177,51 @@ def FastSubValues(mat, alp, s1, s2):
     # similar, to scoring and arrow matrices
     for i in range(1, l1 + 1):
         subvals[i, 1:] = mat[[si1[i - 1]] * l2, si2]
+    return subvals
+
+
+def _FastSubValues(mat, alp, s1, s2):
+    """Creates a matrix with the same dimentions of scoring matrix and arrow matrix that contains the precomputed values of the alignment of each comparation in both sequences.
+
+    Arguments:
+    - `mat`: substitution matrix
+    - `alp`: alphabeth list, index of the subvalue matrix
+    - `s1`: list, enzimatic step sequence 1
+    - `s2`: list, enzimatic step sequence 2
+    """
+    l1, l2 = len(s1), len(s2)
+    subvals = np.zeros((l1 + 1, l2 + 1))  # substitution values matrix
+    # Convert the sequences to sequences of index
+    si2 = np.zeros(l2, int)
+    for i in range(l2):
+        si2[i] = alp.index(s2[i])
+    # Fills subvalue matrix, this initiates in the position (1,1)
+    # similar, to scoring and arrow matrices
+    for i in range(1, l1 + 1):
+        si = i - 1
+        subvals[i, 1:] = mat[alp.index(s1[si]), si2]
+    return subvals
+
+
+def __FastSubValues(mat, alp, s1, s2):
+    """Creates a matrix with the same dimentions of scoring matrix and arrow matrix that contains the precomputed values of the alignment of each comparation in both sequences.
+
+    Arguments:
+    - `mat`: substitution matrix
+    - `alp`: alphabeth dictionary, keys are elements, values are indices 
+             in substitution mat.
+    - `s1`: list, enzimatic step sequence 1
+    - `s2`: list, enzimatic step sequence 2
+    """
+    l1, l2 = len(s1), len(s2)
+    subvals = np.zeros((l1 + 1, l2 + 1))  # substitution values matrix
+    # Convert the sequences to sequences of index
+    si2 = [alp[ec] for ec in s2]
+    # Fills subvalue matrix, this initiates in the position (1,1)
+    # similar, to scoring and arrow matrices
+    for i in range(1, l1 + 1):
+        si = i - 1
+        subvals[i, 1:] = mat[alp[s1[si]], si2]
     return subvals
 
 
@@ -186,6 +256,46 @@ def FastNW(subvals, s1, s2, gap=0.9):
         f = zeros((3, li))  # results of the tree posibles xhoices
 # for each  value in the diagonal
         x, y = i[0], i[1]
+        f[0] = scoremat[x - 1, y] + gap
+        f[1] = scoremat[x, y - 1] + gap
+        f[2] = scoremat[x - 1, y - 1] + subvals[i]
+        f -= 0.001 * sign(f) * random.ranf(f.shape)  # for randomly
+# select from a tie
+        mini = f.min(0)
+        minpos = f.argmin(0)
+        scoremat[i] = mini
+        arrow[i] = minpos
+    return scoremat, arrow, mini
+
+
+def _FastNW(subvals, s1, s2, gap=0.9):
+    """Perform dynamic programing alignment of EC numbers sequences. Creates the scoring and arrow matrices using subvals matrix and diagonal arrays.
+
+    Returns the dynamic programing matrix and the arrow matrix used to trace back the alignment.
+
+    Arguments:
+    - `subvals`: matrix of precomputed values for the alignment of each pair of characters
+    - `s1`: list, enzymatic step sequence 1
+    - `s2`: list, enzymatic step sequence 2
+    - `gap`: gap penalties, default = 1
+    """
+    l1, l2 = len(s1), len(s2)
+    # Create the score and aroow matrices
+    scoremat = zeros((l1 + 1, l2 + 1))
+    arrow = zeros((l1 + 1, l2 + 1))
+    # Create first row and first column with gaps
+    scoremat[0] = arange(l2 + 1) * gap
+    scoremat[:, 0] = arange(l1 + 1) * gap
+    arrow[0] = ones(l2 + 1)
+    # Compute diagonal list
+    dlist = _diagonal_list(l1, l2)
+    # fill the matrix
+    for i in dlist:
+        li = len(i[0])
+        f = zeros((3, li))  # results of the tree posibles xhoices
+# for each  value in the diagonal
+        x = i[0]
+        y = i[1]
         f[0] = scoremat[x - 1, y] + gap
         f[1] = scoremat[x, y - 1] + gap
         f[2] = scoremat[x - 1, y - 1] + subvals[i]
@@ -428,6 +538,19 @@ def arg_parser():
                         help='Gap penalization (from 0 to 1). Default = 0.9')
     args = parser.parse_args()
     return args
+
+
+##################
+# Test sequences #
+##################
+s1 = '6.2.1:2.3.1:1.2.4:2.7.1:4.2.1:5.4.2:2.7.2:1.2.1:4.1.2:2.7.1:5.3.1:5.4.2:3.1.3'
+s1_ = '2.3.1:1.2.4:2.7.1:5.4.2:2.7.2:1.2.1'
+s2 = '1.2.4:2.3.1:2.3.3:4.1.1'
+s3 = '6.3.3:6.3.4:5.4.99:6.3.2:4.3.2:2.4.2:3.2.2'
+ss1 = s1.split(':')
+ss1_ = s1_.split(':')
+ss2 = s2.split(':')
+ss3 = s3.split(':')
 
 
 if __name__ == '__main__':
