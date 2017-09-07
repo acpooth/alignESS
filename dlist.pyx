@@ -221,9 +221,11 @@ cdef minarg(float f[3]):
     return mini, argmin
 
 
+# best performance
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def FastNW__(np.ndarray[DTYPEF_t, ndim=2] mat, dict alp, s1, s2, float gap=0.9):
+def FastNW__(np.ndarray[DTYPEF_t, ndim=2] mat, dict alp, list s1, list s2,
+             float gap=0.9):
     """Perform dynamic programing alignment of EC numbers sequences. Creates
     the scoring and arrow matrices using subvals matrix and diagonal arrays.
 
@@ -237,8 +239,11 @@ def FastNW__(np.ndarray[DTYPEF_t, ndim=2] mat, dict alp, s1, s2, float gap=0.9):
     - `s2`: list, enzymatic step sequence 2
     - `gap`: gap penalties, default = 1
     """
-    cdef  int l1, l2, li, i, j, k, eci, ecj, minpos
-    cdef float mini, randnum, randfactor
+    cdef:
+        int l1, l2, li, i, j, k, eci, ecj, minpos
+        float mini, randum, randfactor
+        float f[3]
+    mini = 0
     l1, l2 = len(s1), len(s2)
     # Create the score and arrow matrices
     cdef np.ndarray[DTYPEF_t, ndim= 2] scoremat = np.zeros((l1 + 1, l2 + 1), DTYPEF)
@@ -249,8 +254,6 @@ def FastNW__(np.ndarray[DTYPEF_t, ndim=2] mat, dict alp, s1, s2, float gap=0.9):
         arrow[0, i] = 1
     for i in range(l1 + 1):
         scoremat[i, 0] = i * gap
-    # alternative
-    cdef float f[3]
     for i in range(1, l1 + 1):
         for j in range(1, l2 + 1):
             eci = alp[s1[i - 1]]
@@ -364,7 +367,192 @@ def scoring(np.ndarray[DTYPEF_t, ndim=2] mat, dict alp, seq1, seq2,
     return score
 
 
-def backtrace(np.ndarray[DTYPE_t, ndim=2] arrow, s1, s2):
+def gappen(list seq1, list seq2):
+    """Returns the number
+    Keyword Arguments:
+    list seq1 -- 
+    list seq2 -- 
+    """
+    cdef:
+        int l1 = len(seq1)
+        float gappen = 0
+        str gap = '-.-.-'
+        int i
+        float sgaps = 0
+        float ngaps = 0
+        float sgaps2 = 0
+        float ngaps2 = 0
+        float fgaps = 0
+        float fgaps2 = 0
+        float fblock1 = 0
+        float fblock2 = 0
+        str ec1, ec2
+        bool begin1 = True
+        bool begin2 = True
+        bool block1 = True
+        bool block2 = True
+
+    # four cases depending in wich sequence has gaps
+    if gap not in seq1 and gap not in seq2:
+        return gappen           # no gaps, return 0
+    elif gap in seq1 and gap not in seq2:
+        for i in range(l1):      # Gaps only in seq1
+            ec1 = seq1[i]
+            if begin1 == True:
+                if ec1 == gap:
+                    continue
+                else:
+                    begin1 = False
+                    continue
+            else:
+                if ec1 == gap:
+                    sgaps += 1
+                    fblock1 += 1
+                    if block1 == True:
+                        ngaps += 1
+                        block1 = False
+                else:
+                    block1 = True
+                    fblock1 = 0
+        if block1 == False:
+            sgaps -= fblock1
+            ngaps -= 1
+        gappen = ngaps / sgaps / 2
+        return gappen
+    elif gap not in seq1 and gap in seq2:
+        for i in range(l1):      # Gaps only in seq2
+            ec2 = seq2[i]
+            if begin2 == True:
+                if ec2 == gap:
+                    continue
+                else:
+                    begin2 = False
+                    continue
+            else:
+                if ec2 == gap:
+                    sgaps += 1
+                    fblock2 += 1
+                    if block2 == True:
+                        ngaps += 1
+                        block2 = False
+                else:
+                    block2 = True
+                    fblock2 = 0
+        if block2 == False:
+            sgaps -= fblock2
+            ngaps -= 1
+        gappen = ngaps / sgaps / 2
+    else:
+        for i in range(l1):
+            ec1 = seq1[i]
+            ec2 = seq2[i]
+            if begin1 == True:
+                if ec1 == gap:
+                    pass
+                else:
+                    begin1 = False
+                    pass
+            else:
+                if ec1 == gap:
+                    sgaps += 1
+                    fblock1 += 1
+                    if block1 == True:
+                        ngaps += 1
+                        block1 = False
+                else:
+                    block1 = True
+                    fblock1 = 0
+            ec2 = seq2[i]
+            if begin2 == True:
+                if ec2 == gap:
+                    pass
+                else:
+                    begin2 = False
+                    pass
+            else:
+                if ec2 == gap:
+                    sgaps2 += 1
+                    fblock2 += 1
+                    if block2 == True:
+                        ngaps2 += 1
+                        block2 = False
+                else:
+                    block2 = True
+                    fblock2 = 0
+        if block1 == False:
+            sgaps -= fblock1
+            ngaps -= 1
+        if block2 == False:
+            sgaps2 -= fblock2
+            ngaps2 -= 1
+        if ngaps <= 0 and ngaps2 > 0:
+            gappen = (ngaps2 / sgaps2) / 2
+        elif ngaps > 0 and ngaps2 <= 0:
+            gappen = (ngaps / sgaps) / 2
+        else:
+            gappen = ((ngaps / sgaps) + (ngaps2 / sgaps2)) / 2
+    return gappen
+
+# better performance
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+def scoring_(np.ndarray[DTYPEF_t, ndim=2] mat, dict alp, list seq1, list seq2,
+             float gap=1, float fhomo=0.95, float fpengap=0.05):
+    """ This function evaluates an enzymatic step sequences pair alignment.
+    The sequences need to be aligned. This function tries to recall the
+    fitness function in Ortegon-Cano, 2011.
+
+    Arguments:
+    - `mat`: score matrix
+    - `alp`: alphabet, index of score matrix, dic
+    - `s1`: enzimatic step sequence 1, list
+    - `s2`: enzimatic step sequence 2, list
+    - `gap`: gap penalization
+    - `fhomo`: Weight factor to multiplicate the homogeneity fraction of score
+    - `fpengap`: Weight factor to multiplicate the gap penalization
+    """
+    cdef unsigned int l1, l2, length, i, ii, fi, x, y, g_lenght, alisum
+    cdef float gaps, pengaps, score, sgaps, ngaps
+    cdef str ec1, ec2, s1, s2, s
+    cdef str gapstr = '-.-.-'
+    cdef str dotstr = '...'
+    # define float for homogeneity mean. alisum = n aligned
+    cdef float homo = 0.0
+    l1 = len(seq1)
+    l2 = len(seq2)
+    assert l1 == l2, 'The aligned sequences must be of the same length'
+    # -- Mean column homogeneity evaluation
+    length = l1  # Alignment length
+    # homo_col = []
+    for i in range(length):
+        ec1 = seq1[i]
+        ec2 = seq2[i]
+        if ec1 == gapstr or ec2 == gapstr:  # and s1[i] != s2[1]
+            # homo_col.append(gap)
+            homo += gap
+        elif ec1 == dotstr or ec2 == dotstr:
+            pass
+        elif ec1 == '' or ec2 == '':
+            pass
+        else:
+            x = alp[ec1]
+            y = alp[ec2]
+            homo += mat[x, y]  # pondered by 0.6 as in
+
+    homo = homo / length
+    pengap = gappen(seq1, seq2)
+    ###################################################
+    # IMPORTANT ---                                   #
+    # gap "penalization" argumet is not used!!!! the  #
+    ###################################################
+    # Final score calculation
+    score = (homo * fhomo) + (pengap * fpengap)  # + incpen
+    return score
+
+
+def backtrace(np.ndarray[DTYPE_t, ndim=2] arrow, list s1, list s2):
     """Reads the arrow matrix and return the aligned sequences in list form.
     Global, N-W
 
@@ -373,16 +561,14 @@ def backtrace(np.ndarray[DTYPE_t, ndim=2] arrow, s1, s2):
     - `s1`: enzymatic step sequence, list
     - `s2`: enzymatic step sequence, list
     """
-    cdef int v, h
-    cdef bool ok
-    # Transform the sequences strings into EC numbers lists
-    st1, st2 = [], []  # aligned sequences
-    ok = True
-    v = len(s1)
-    h = len(s2)
     #v, h = arrow.shape
-    # v -= 1
-    # h -= 1
+    cdef:
+        int v = len(s1)
+        int h = len(s2)
+        bool ok = True
+        list st1 = []
+        list st2 = []
+    # Transform the sequences strings into EC numbers lists
     while ok:
         if arrow[v, h] == 0:  # vertical best result, s1
             st1.append(s1[v - 1])
@@ -475,8 +661,9 @@ def NW(np.ndarray[DTYPEF_t, ndim=2] mat, dict ecs, s1, s2, float gap=0.9,
     return s1, s2, score
 
 
-def NW_(np.ndarray[DTYPEF_t, ndim=2] mat, dict ecs, s1, s2, float gap=0.9,
-        bool local=False, bool localize=False, bool nws=False):
+def NW_(np.ndarray[DTYPEF_t, ndim=2] mat, dict ecs, list s1, list s2,
+        float gap=0.9, bool local=False, bool localize=False,
+        bool nws=False):
     """
     NW alignment function. Creates a pairwise alignment using a Needelman-Wunsh
     algorithm.
@@ -487,16 +674,15 @@ def NW_(np.ndarray[DTYPEF_t, ndim=2] mat, dict ecs, s1, s2, float gap=0.9,
     - `s1`: EC numbers sequence 1, list
     - `s2`: EC numbers sequence 2, list
     - `gap`: gap penalty
-    - `local`: if local = True, then the score of the alignment is calculated
-               localy, i.e. only en the part of the alignment covered by the
-               shortest sequence
     - `localize`: if localize = True, then, the function returns only the
                fragment of the alignment covered by the shortest sequence
-
+               and the score is calculated accordingly
     - `nws`: if true, the function returns the scores as is returned by the
                NW algorithm
     """
-    cdef float score
+    cdef:
+        float score, mini
+        str aseq1, aseq2
     sco, arr, mini = FastNW__(mat, ecs, s1, s2, gap=gap)  # create score and
 # arrow matrices
     s1, s2 = backtrace(arr, s1, s2)  # backtrace alingment
@@ -522,8 +708,8 @@ def NW_(np.ndarray[DTYPEF_t, ndim=2] mat, dict ecs, s1, s2, float gap=0.9,
             s2 = ':'.join(s2)
         return s1, s2, mini
     scoring_gap = 1
-    score = scoring(mat, ecs, s1, s2, gap=scoring_gap, local=local,
-                    fhomo=0.95, fpengap=0.05)
+    score = scoring_(mat, ecs, s1, s2, gap=scoring_gap, fhomo=0.95,
+                     fpengap=0.05)
     if localize:
         length = len(s1)
         ii = 0
@@ -539,8 +725,7 @@ def NW_(np.ndarray[DTYPEF_t, ndim=2] mat, dict ecs, s1, s2, float gap=0.9,
 
         s1 = s1[ii:fi]
         s2 = s2[ii:fi]
-    s1 = ':'.join(s1)
-    s2 = ':'.join(s2)
-    return s1, s2, score
-
+    aseq1 = ':'.join(s1)
+    aseq2 = ':'.join(s2)
+    return aseq1, aseq2, score
 
