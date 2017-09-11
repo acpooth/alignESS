@@ -661,7 +661,7 @@ def NW(np.ndarray[DTYPEF_t, ndim=2] mat, dict ecs, s1, s2, float gap=0.9,
     return s1, s2, score
 
 
-def NW_(np.ndarray[DTYPEF_t, ndim=2] mat, dict ecs, list s1, list s2,
+def NW_(np.ndarray[DTYPEF_t, ndim=2] mat, dict ecs, list seq1, list seq2,
         float gap=0.9, bool local=False, bool localize=False,
         bool nws=False):
     """
@@ -673,7 +673,7 @@ def NW_(np.ndarray[DTYPEF_t, ndim=2] mat, dict ecs, list s1, list s2,
     - `ecs`: List of ec numbers that represent the labels of the matrix
     - `s1`: EC numbers sequence 1, list
     - `s2`: EC numbers sequence 2, list
-    - `gap`: gap penalty
+    - `gap`: gap penalty for NW algorithm
     - `localize`: if localize = True, then, the function returns only the
                fragment of the alignment covered by the shortest sequence
                and the score is calculated accordingly
@@ -681,51 +681,87 @@ def NW_(np.ndarray[DTYPEF_t, ndim=2] mat, dict ecs, list s1, list s2,
                NW algorithm
     """
     cdef:
-        float score, mini
+        float score, mini, scoring_gap  
         str aseq1, aseq2
-    sco, arr, mini = FastNW__(mat, ecs, s1, s2, gap=gap)  # create score and
+        int length, i, ii, fi
+        char binit      # localize initial index boolena
+        char bblock     # block mar boolean
+    sco, arr, mini = FastNW__(mat, ecs, seq1, seq2, gap=gap)  # create score and
 # arrow matrices
-    s1, s2 = backtrace(arr, s1, s2)  # backtrace alingment
+    seq1, seq2 = backtrace(arr, seq1, seq2)  # backtrace alingment
     # scoring : the scoring is doing using the entropy schema to
     # normalize the score in a range 0 to 1 and to generate similar
     # results to the genetic algorithm
-    if nws:                    # NW score
-        if localize:
-            length = len(s1)
-            ii = 0
-            for i in range(length):
-                if s1[i] != '-.-.-' and s2[i] != '-.-.-':
-                    ii = i    # initial index
-                    break
-            fi = length
-            for i in range(length)[::-1]:
-                if s1[i] != '-.-.-' and s2[i] != '-.-.-':
-                    break
-                fi = i      # final index
-            s1 = s1[ii:fi]
-            s2 = s2[ii:fi]
-            s1 = ':'.join(s1)
-            s2 = ':'.join(s2)
-        return s1, s2, mini
-    scoring_gap = 1
-    score = scoring_(mat, ecs, s1, s2, gap=scoring_gap, fhomo=0.95,
-                     fpengap=0.05)
+    ### ---
+    # if localize = localized alignment
     if localize:
-        length = len(s1)
+        binit = 1
+        bblock = 0
+        length = len(seq1)
         ii = 0
+        fi = 0
         for i in range(length):
-            if s1[i] != '-.-.-' and s2[i] != '-.-.-':
-                ii = i    # initial index
-                break
-        fi = length
-        for i in range(length)[::-1]:
-            if s1[i] != '-.-.-' and s2[i] != '-.-.-':
-                break
-            fi = i      # final index
-
-        s1 = s1[ii:fi]
-        s2 = s2[ii:fi]
-    aseq1 = ':'.join(s1)
-    aseq2 = ':'.join(s2)
+            if seq1[i] != '-.-.-' and seq2[i] != '-.-.-' and binit:
+                ii = i
+                binit = 0
+            elif (seq1[i] == '-.-.-' or seq2[i] == '-.-.-') and bblock:
+                fi = i
+                bblock = 0
+            elif seq1[i] != '-.-.-' and seq2[i] != '-.-.-':
+                bblock = 1
+        if bblock:
+            fi = length
+        seq1 = seq1[ii: fi]
+        seq2 = seq2[ii: fi]
+    if nws:
+        score = mini
+    else:
+        scoring_gap = 1
+        score = scoring_(mat, ecs, seq1, seq2, gap=scoring_gap, fhomo=0.95,
+                         fpengap=0.05)
+    aseq1 = ':'.join(seq1)
+    aseq2 = ':'.join(seq2)
     return aseq1, aseq2, score
+
+
+        
+    # if nws:                    # NW score
+    #     if localize:
+    #         length = len(s1)
+    #         ii = 0
+    #         for i in range(length):
+    #             if s1[i] != '-.-.-' and s2[i] != '-.-.-':
+    #                 ii = i    # initial index
+    #                 break
+    #         fi = length
+    #         for i in range(length)[::-1]:
+    #             if s1[i] != '-.-.-' and s2[i] != '-.-.-':
+    #                 break
+    #             fi = i      # final index
+    #         s1 = s1[ii:fi]
+    #         s2 = s2[ii:fi]
+    #         s1 = ':'.join(s1)
+    #         s2 = ':'.join(s2)
+    #     return s1, s2, mini
+    # scoring_gap = 1
+    # score = scoring_(mat, ecs, s1, s2, gap=scoring_gap, fhomo=0.95,
+    #                  fpengap=0.05)
+    # if localize:
+    #     length = len(s1)
+    #     ii = 0
+    #     for i in range(length):
+    #         if s1[i] != '-.-.-' and s2[i] != '-.-.-':
+    #             ii = i    # initial index
+    #             break
+    #     fi = length
+    #     for i in range(length)[::-1]:
+    #         if s1[i] != '-.-.-' and s2[i] != '-.-.-':
+    #             break
+    #         fi = i      # final index
+
+    #     s1 = s1[ii:fi]
+    #     s2 = s2[ii:fi]
+    # aseq1 = ':'.join(s1)
+    # aseq2 = ':'.join(s2)
+    # return aseq1, aseq2, score
 
