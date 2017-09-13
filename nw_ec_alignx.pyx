@@ -72,8 +72,8 @@ def _FastNW(np.ndarray[DTYPEF_t, ndim=2] mat, dict ecs, list seq1, list seq2,
     mini = 0
     l1, l2 = len(seq1), len(seq2)
     # Create the score and arrow matrices
-    cdef np.ndarray[DTYPEF_t, ndim= 2] scoremat = np.zeros((l1 + 1, l2 + 1), DTYPEF)
-    cdef np.ndarray[DTYPE_t, ndim= 2] arrow = np.zeros((l1 + 1, l2 + 1), DTYPE)
+    cdef np.ndarray[DTYPEF_t, ndim = 2] scoremat = np.zeros((l1 + 1, l2 + 1), DTYPEF)
+    cdef np.ndarray[DTYPE_t, ndim = 2] arrow = np.zeros((l1 + 1, l2 + 1), DTYPE)
     # Create first row and first column with gaps
     for i in range(l2 + 1):
         scoremat[0, i] = i * gap
@@ -99,7 +99,7 @@ def _FastNW(np.ndarray[DTYPEF_t, ndim=2] mat, dict ecs, list seq1, list seq2,
             # fill the matrices
             scoremat[i, j] = mini
             arrow[i, j] = minpos
-    return scoremat, arrow, mini
+    return arrow, mini
 
 
 cdef gappen(list seq1, list seq2):
@@ -152,7 +152,10 @@ cdef gappen(list seq1, list seq2):
         if block1 == False:
             sgaps -= fblock1
             ngaps -= 1
-        gappen = ngaps / sgaps / 2
+        if sgaps == 0:
+            gappen = 0.0
+        else:
+            gappen = ngaps / sgaps / 2
         return gappen
     elif gap not in seq1 and gap in seq2:
         for i in range(l1):      # Gaps only in seq2
@@ -176,7 +179,10 @@ cdef gappen(list seq1, list seq2):
         if block2 == False:
             sgaps -= fblock2
             ngaps -= 1
-        gappen = ngaps / sgaps / 2
+        if sgaps == 0:
+            gappen = 0.0
+        else:
+            gappen = ngaps / sgaps / 2
     else:
         for i in range(l1):
             ec1 = seq1[i]
@@ -224,6 +230,8 @@ cdef gappen(list seq1, list seq2):
             gappen = (ngaps2 / sgaps2) / 2
         elif ngaps > 0 and ngaps2 <= 0:
             gappen = (ngaps / sgaps) / 2
+        elif ngaps <= 0 and ngaps2 <= 0:
+            gappen = 0.0
         else:
             gappen = ((ngaps / sgaps) + (ngaps2 / sgaps2)) / 2
     return gappen
@@ -352,7 +360,7 @@ def NW(np.ndarray[DTYPEF_t, ndim=2] mat, dict ecs, list seq1, list seq2,
         char binit      # localize initial index boolena
         char bblock     # block mar boolean
     # create NW matrices
-    sco, arr, mini = _FastNW(mat, ecs, seq1, seq2, gap=gap)
+    arr, mini = _FastNW(mat, ecs, seq1, seq2, gap=gap)
     seq1, seq2 = _backtrace(arr, seq1, seq2)  # backtrace alingment
     # localized alignmet
     if localize:
@@ -384,4 +392,6 @@ def NW(np.ndarray[DTYPEF_t, ndim=2] mat, dict ecs, list seq1, list seq2,
     if strfmt:
         aseq1 = ':'.join(seq1)
         aseq2 = ':'.join(seq2)
-    return aseq1, aseq2, score
+        return aseq1, aseq2, score
+    else:
+        return seq1, seq2, score

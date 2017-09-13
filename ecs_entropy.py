@@ -170,7 +170,10 @@ def save_matrix(sub_matrix, ecs_list, filename, format='npz'):
 
 def main():
     args = parser()
+    print('Loading EC file...')
     ecs = load_ec_file(args.ecfile, ecl=3)
+    ecs.append('9.9.9')          # Add 9.9.9 fake EC number
+    print('Building matrix')
     mat = build_entropy_matrix(ecs)
     fname = 'h_ent_mat'
     save_matrix(mat, ecs, fname, format=args.store_format)
@@ -180,6 +183,7 @@ def main():
         plt.colorbar(label='Entropy')
         plt.savefig('ent_matrix.png', dpi=200)
         plt.close()
+    print('Done!!! have a nice day =)')
 
 
 if __name__ == '__main__':
