@@ -4,7 +4,14 @@
 # @uthor: acph (dragopoot@gmail.com)
 #
 
-"""Program to align a pair of enzimatic step sequences  using an implementation of the Needleman-Wuncsh  dynamic programing algorithm """
+"""LEGACY!!!!
+- This file is no more developed
+- Maintainded only for testing purposes
+- New speed enhanced functions are in cython nw_ec_alignx.pyximport
+- New api in alignESS.py
+
+Program to align a pair of enzimatic step sequences  using an implementation of the Needleman-Wuncsh  
+dynamic programing algorithm """
 
 import argparse
 from numpy import zeros, arange, random, sign, mean, ones, load, uint16, array
@@ -20,8 +27,9 @@ else:
     fol = '/'.join(fol[:-1])
 #mat = load(fol + '/entropy_matrix.npz')
 #mat = mat['matrix']
-
-hmat = load(fol + '/entropy_matrix_hierarchy.npz')
+# matfile = 'h_ent_mat.npz'       # ecs_entropy.py generated file
+#hmat = load(fol + '/entropy_matrix_hierarchy.npz')
+hmat = load(fol + '/h_ent_mat.npz')
 ecs = hmat['ecs']
 hmat = hmat['matrix']
 lecs = list(ecs)

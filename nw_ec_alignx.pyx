@@ -15,7 +15,10 @@
 This version performs ~30 times fastter than the original pure python/numpy
 implementation."""
 
+import ctypes
 import cython
+from multiprocessing import Pool, Array
+from functools import partial
 cimport cython
 from cpython cimport bool
 import numpy as np
@@ -59,7 +62,7 @@ def _FastNW(np.ndarray[DTYPEF_t, ndim=2] mat, dict ecs, list seq1, list seq2,
 
     Arguments:
     - `mat`: EC number similarity (distance) matrix
-    - `ecs`: EC number dictionary. Keys are EC numbers (3 levels of 
+    - `ecs`: EC number dictionary. Keys are EC numbers (3 levels of
         classification) and values are indices to similarity matrix (mat)
     - `seq1`: enzymatic step sequence 1, list of (unaligned) EC numbers
     - `seq2`: enzymatic step sequence 2, list of (unaligned) EC numbers
@@ -72,8 +75,8 @@ def _FastNW(np.ndarray[DTYPEF_t, ndim=2] mat, dict ecs, list seq1, list seq2,
     mini = 0
     l1, l2 = len(seq1), len(seq2)
     # Create the score and arrow matrices
-    cdef np.ndarray[DTYPEF_t, ndim = 2] scoremat = np.zeros((l1 + 1, l2 + 1), DTYPEF)
-    cdef np.ndarray[DTYPE_t, ndim = 2] arrow = np.zeros((l1 + 1, l2 + 1), DTYPE)
+    cdef np.ndarray[DTYPEF_t, ndim= 2] scoremat = np.zeros((l1 + 1, l2 + 1), DTYPEF)
+    cdef np.ndarray[DTYPE_t, ndim= 2] arrow = np.zeros((l1 + 1, l2 + 1), DTYPE)
     # Create first row and first column with gaps
     for i in range(l2 + 1):
         scoremat[0, i] = i * gap
@@ -105,8 +108,8 @@ def _FastNW(np.ndarray[DTYPEF_t, ndim=2] mat, dict ecs, list seq1, list seq2,
 cdef gappen(list seq1, list seq2):
     """Returns the number
     Keyword Arguments:
-    list seq1 -- 
-    list seq2 -- 
+    list seq1 --
+    list seq2 --
     """
     cdef:
         int l1 = len(seq1)
@@ -243,16 +246,16 @@ cdef gappen(list seq1, list seq2):
 @cython.wraparound(False)
 def scoring(np.ndarray[DTYPEF_t, ndim=2] mat, dict ecs, list seq1, list seq2,
             float gap=1, float fhomo=0.95, float fpengap=0.05):
-    """ This function evaluates a pair of alignmed ESS and returns an entroy 
-    based similarity (distance) score. This value is in the range 0-1. 0 means 
+    """ This function evaluates a pair of alignmed ESS and returns an entroy
+    based similarity (distance) score. This value is in the range 0-1. 0 means
     more similar sequences and 1 means dissimilar sequences.
 
-    The score tries to recall the fitness function proposed in Ortegon, et al. 
+    The score tries to recall the fitness function proposed in Ortegon, et al.
     2015. Comput Struct Biotechnol J. 9;13.
 
     Arguments:
     - `mat`: EC number similarity (distance) matrix
-    - `ecs`: EC number dictionary. Keys are EC numbers (3 levels of 
+    - `ecs`: EC number dictionary. Keys are EC numbers (3 levels of
         classification) and values are indices to similarity matrix (mat)
     - `seq1`: enzymatic step sequence 1, list of (unaligned) EC numbers
     - `seq2`: enzymatic step sequence 2, list of (unaligned) EC numbers
@@ -334,9 +337,9 @@ def _backtrace(np.ndarray[DTYPE_t, ndim=2] arrow, list seq1, list seq2):
 
 def NW(np.ndarray[DTYPEF_t, ndim=2] mat, dict ecs, list seq1, list seq2,
        float gap=0.9, bool localize=False, bool nws=False,
-       bool strfmt=True):
+       bool strfmt=True, bool oscore=False):
     """
-    NW alignment function. Creates a pairwise alignment of Enzymatic Step 
+    NW alignment function. Creates a pairwise alignment of Enzymatic Step
     Sequences (ESS) using a Needelman-Wunsh algorithm.
 
     Arguments:
@@ -350,8 +353,9 @@ def NW(np.ndarray[DTYPEF_t, ndim=2] mat, dict ecs, list seq1, list seq2,
             and the score is calculated accordingly
     - `nws`: if true, the function returns the scores as is returned by the
             NW algorithm
-    - `strfmt`: if True. The aligned sequences are in string format. If 
+    - `strfmt`: if True. The aligned sequences are in string format. If
             False, the sequences are in list format
+    - `oscore`: if True, only returns the score of the alignment, else
     """
     cdef:
         float score, mini, scoring_gap
@@ -373,6 +377,7 @@ def NW(np.ndarray[DTYPEF_t, ndim=2] mat, dict ecs, list seq1, list seq2,
             if seq1[i] != '-.-.-' and seq2[i] != '-.-.-' and binit:
                 ii = i
                 binit = 0
+                fi = ii + 1
             elif (seq1[i] == '-.-.-' or seq2[i] == '-.-.-') and bblock:
                 fi = i
                 bblock = 0
@@ -389,9 +394,185 @@ def NW(np.ndarray[DTYPEF_t, ndim=2] mat, dict ecs, list seq1, list seq2,
         scoring_gap = 1
         score = scoring(mat, ecs, seq1, seq2, gap=scoring_gap, fhomo=0.95,
                         fpengap=0.05)
+    if oscore:
+        return score
     if strfmt:
         aseq1 = ':'.join(seq1)
         aseq2 = ':'.join(seq2)
         return aseq1, aseq2, score
     else:
         return seq1, seq2, score
+
+
+def ind_vs_alldb(int ind, list seqs, np.ndarray[DTYPEF_t, ndim=2] mat,
+                 dict decs, float thres=1.0, bool wholedb=False,
+                 bool localize=False):
+    """Align the ESSs in the specified index (ind) versus
+all the rest of sequences with index > ind.
+
+    Keyword Arguments:
+    ind      -- Int, index of the ESS to compare against the database
+    seqs     -- List, ESSs database. Each ESS is a list of EC numbers
+    mat      -- ndarray, EC number similarity matrix
+    decs     -- Dict, EC number index dictionary
+    thres    -- Float, score threshold to filter data (default 1.0). The data 
+                captured will be score <= thres.
+    wholedb  -- Bool, If True, the ind ESS is compared against all the sequences
+                stored in seqs list.
+    localize -- Bool, If True, the scoring of the alignment is made only in then
+                part of the alignment covered by both ESSs
+    """
+    cdef:
+        dict resdic = {ind: {}}
+        list seq1, seq2
+        int j
+        float sco
+    seq1 = seqs[ind]
+    if wholedb:
+        indices = range(len(seqs))
+    else:
+        indices = range(ind + 1, len(seqs))
+    for j in indices:
+        seq2 = seqs[j]
+        sco = NW(mat, decs, seq1, seq2, oscore=True,
+                 localize=localize)
+        if sco <= thres:
+            resdic[ind][j] = sco
+    return resdic
+
+
+def alldb_comp(list seqs, np.ndarray[DTYPEF_t, ndim=2] mat, dict decs,
+               float thres=1.0, bool localize=False, int nproc=2):
+    """Align all the ESS in the database (seqs) and return the results in form 
+    of dictionary. The result is equivalent to the upper part the all vs all 
+    comparisson matrix.
+
+    BEWARE if the database is huge and the threshold is > 0.4 the procces may 
+    use all the RAM
+
+    Keyword Arguments:
+    seqs     -- List, ESSs database. Each ESS is a list of EC numbers
+    mat      -- ndarray, EC number similarity matrix
+    decs     -- Dict, EC number index dictionary
+    thres    -- Float, score threshold to filter data (default 1.0). The data 
+                captured will be score <= thres.
+    localize -- Score the alignment in the segment covered by te smallest ESS 
+                (default False)
+    nproc    -- Number of cores used (default 2)
+    """
+    cdef:
+        indices = list(range(len(seqs)))
+        list resd
+        dict d
+        dict result = {}
+    pool = Pool(processes=nproc)
+    align_func = partial(ind_vs_alldb, mat=mat, decs=decs, seqs=seqs,
+                         thres=thres, localize=localize)
+    resd = pool.map(align_func, indices, chunksize=nproc)
+
+    for d in resd:
+        result.update(d)
+    return result
+
+
+def list_vs_alldb(list indices, list seqs, np.ndarray[DTYPEF_t, ndim=2] mat,
+                  dict decs, float thres=1.0, bool localize=False,
+                  bool wholedb=False, int nproc=2):
+    """Align all the ESS in the database (seqs) and return the results in form 
+    of dictionary. The result is equivalent to the upper part the all vs all 
+    comparisson matrix.
+
+    BEWARE if the database is huge and the threshold is > 0.4 the procces may 
+    use all the RAM
+
+    Keyword Arguments:
+    inds     -- List of indices of the database to align vs the rest of database
+    seqs     -- List, ESSs database. Each ESS is a list of EC numbers
+    mat      -- ndarray, EC number similarity matrix
+    decs     -- Dict, EC number index dictionary
+    thres    -- Float, score threshold to filter data (default 1.0). The data 
+                captured will be score <= thres.
+    localize -- Score the alignment in the segment covered by te smallest ESS 
+                (default False)
+    wholedb  -- Bool, If True, the ind ESS is compared against all the sequences
+                stored in seqs list.
+    nproc    -- Number of cores used (default 2)
+    """
+    cdef:
+        list resd
+        dict d
+        dict result = {}
+    pool = Pool(processes=nproc)
+    align_func = partial(ind_vs_alldb, mat=mat, decs=decs, seqs=seqs,
+                         thres=thres, localize=localize, wholedb=wholedb)
+    resd = pool.map(align_func, indices, chunksize=nproc)
+
+    for d in resd:
+        result.update(d)
+    return result
+
+
+def alldb_shared(seqs,  mat,  decs, thres=1.0, localize=False,
+                 nproc=2):
+    """Align all the ESS in the database (seqs) and return the results as a 
+    matrix with only the upper part filled. The rest of the matrix is 
+    initialized with 1s.
+
+    This function is more memory efficient than alldb function, whoever
+    coution must be taken if th database is to big (> 80000 seqs)
+
+    Keyword Arguments:
+    seqs     -- List, ESSs database. Each ESS is a list of EC numbers
+    mat      -- ndarray, EC number similarity matrix
+    decs     -- Dict, EC number index dictionary
+    thres    -- Float, score threshold to filter data (default 1.0). The data 
+                captured will be score <= thres.
+    localize -- Score the alignment in the segment covered by te smallest ESS 
+                (default False)
+    nproc    -- Number of cores used (default 2)
+    """
+    total = len(seqs)
+    _create_global_arr(total)
+    indices = range(total)
+    pool = Pool(processes=nproc)
+    align_func = partial(_fill_mat, seqs=seqs, mat=mat, decs=decs,
+                         thres=thres, localize=localize)
+    pool.map(align_func, indices, chunksize=nproc)
+    return scomat
+
+
+def _create_global_arr(total):
+    """Create shared global array for all vs all comparisson
+
+    Keyword Arguments:
+    total  --  Row size of square matrix
+    """
+    global scomat
+    shared_sco_base = Array(ctypes.c_float, total * total)
+    scomat_ = np.frombuffer(shared_sco_base.get_obj(), dtype=np.float32)
+    scomat = scomat_.reshape((total, total))
+    scomat[:, :] = 1
+
+
+def _fill_mat(ind, seqs, mat, decs, localize, float thres):
+    """Fill shared global matrix
+
+    Keyword Arguments:
+    seqs     -- List, ESSs database. Each ESS is a list of EC numbers
+    mat      -- ndarray, EC number similarity matrix
+    decs     -- Dict, EC number index dictionary
+    thres    -- Float, score threshold to filter data (default 1.0). The data 
+                captured will be score <= thres.
+    localize -- Score the alignment in the segment covered by te smallest ESS 
+                (default False)
+    """
+    cdef:
+        int j
+        float sco
+        list seq1, seq2
+    seq1 = seqs[ind]
+    for j in range(ind + 1, len(seqs)):
+        seq2 = seqs[j]
+        sco = NW(mat, decs, seq1, seq2, oscore=True,
+                 localize=localize)
+        scomat[ind, j] = sco
