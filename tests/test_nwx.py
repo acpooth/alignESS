@@ -104,6 +104,34 @@ def test_indvsalldb_len(seqs, decs, hmat):
     assert len(scoreswhole[89]) == 100
 
 
+def test_seqvsdb_len(seqs, decs, hmat):
+    """Test for the correct length output in seqs_vs_db output"""
+    subs = seqs[:100]
+    n = len(subs)
+    seq1 = seqs[50]
+    scores = nwx.seq_vs_db(seq1, subs, hmat, decs)
+    assert len(scores) == n
+    sco_thres = nwx.seq_vs_db(seq1, subs, hmat, decs, thres=0.3)
+    assert len(sco_thres) < n
+
+
+def test_dbvsdb_len(seqs, decs, hmat):
+    """Test for the correct length in db_vs_db output
+    """
+    subs1 = seqs[:50]
+    n1 = len(subs1)
+    subs2 = seqs[100:200]
+    n2 = len(subs2)
+    scores = nwx.db_vs_db(subs1, subs2, hmat, decs)
+    assert len(scores) == n1
+    assert len(scores[0]) == n2
+    sco_thres = nwx.db_vs_db(subs1, subs2, hmat, decs,
+                             thres=0.3)
+    assert len(sco_thres) < n1
+    i = list(sco_thres.keys())[0]
+    assert len(sco_thres[i]) < n2
+
+
 def test_listvsalldb_len(seqs, decs, hmat):
     """Test for the correct length in list_vs_alldb output
     """

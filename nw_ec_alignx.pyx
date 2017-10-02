@@ -75,8 +75,8 @@ def _FastNW(np.ndarray[DTYPEF_t, ndim=2] mat, dict ecs, list seq1, list seq2,
     mini = 0
     l1, l2 = len(seq1), len(seq2)
     # Create the score and arrow matrices
-    cdef np.ndarray[DTYPEF_t, ndim= 2] scoremat = np.zeros((l1 + 1, l2 + 1), DTYPEF)
-    cdef np.ndarray[DTYPE_t, ndim= 2] arrow = np.zeros((l1 + 1, l2 + 1), DTYPE)
+    cdef np.ndarray[DTYPEF_t, ndim = 2] scoremat = np.zeros((l1 + 1, l2 + 1), DTYPEF)
+    cdef np.ndarray[DTYPE_t, ndim = 2] arrow = np.zeros((l1 + 1, l2 + 1), DTYPE)
     # Create first row and first column with gaps
     for i in range(l2 + 1):
         scoremat[0, i] = i * gap
@@ -415,12 +415,13 @@ all the rest of sequences with index > ind.
     seqs     -- List, ESSs database. Each ESS is a list of EC numbers
     mat      -- ndarray, EC number similarity matrix
     decs     -- Dict, EC number index dictionary
-    thres    -- Float, score threshold to filter data (default 1.0). The data 
+    thres    -- Float, threshold score to filter data (default 1.0). The data 
                 captured will be score <= thres.
     wholedb  -- Bool, If True, the ind ESS is compared against all the sequences
                 stored in seqs list.
-    localize -- Bool, If True, the scoring of the alignment is made only in then
-                part of the alignment covered by both ESSs
+    localize -- Bool. If True, the scoring of the alignment will be 
+                made only in the part of the alignment covered by 
+                the shortest ESS (default False)
     """
     cdef:
         dict resdic = {ind: {}}
@@ -441,6 +442,66 @@ all the rest of sequences with index > ind.
     return resdic
 
 
+def seq_vs_db(seq1, seqs, mat, decs, thres=1.0, localize=False):
+    """Align de specified ESSs vs all the ESS in the database seqs. 
+    Returns a dictionary with the scores. The keys are the index of
+    the sequenc in database (seqs) and the values are ths scores.
+
+    Keyword Arguments:
+    seq1     -- List, ESS. Each element of the list is an EC number
+    seqs     -- List, ESSs database. Each ESS is a list of EC numbers
+    mat      -- ndarray, EC number similarity matrix
+    decs     -- Dict, EC number index dictionary
+    thres    -- Float, threshold score to filter de data (default 1.0)
+                The data wil be captured with score <= thres.
+    localize -- Bool. If True, the scoring of the alignment will be 
+                made only in the part of the alignment covered by 
+                the shortest ESS (default False)
+    """
+    resdict = {}
+    for i in range(len(seqs)):
+        seq2 = seqs[i]
+        sco = NW(mat, decs, seq1, seq2, oscore=True, localize=localize)
+        if sco <= thres:
+            resdict[i] = sco
+    return resdict
+
+
+def db_vs_db(seqs1, seqs2, mat, decs, thres=1.0, localize=False, nproc=2):
+    """Align all the ESS in both databases (seqs1, seqs2). The result
+    is a dictionary of dictionaries. The fist key representes the index
+    in of the ESS in the first database; the second key is the index of
+    the ESS in the second database and the value is the score.
+
+    BEWARE if the database is huge and the threshold is > 0.4 the procces may 
+    use all the RAM
+
+    Keyword Arguments:
+    seqs1    -- List, ESSs database1. Each element is a list of EC numbers
+    seqs2    -- List, ESSs database2.
+    mat      -- ndarray, EC number similarity matrix
+    decs     -- Dict, EC number index dictionary
+    thres    -- Float, threshold score to filter de data (default 1.0)
+                The data wil be captured with score <= thres.
+    localize -- Bool. If True, the scoring of the alignment will be 
+                made only in the part of the alignment covered by 
+                the shortest ESS (default False)
+    nproc    -- Number of cores to use (default 2)
+    """
+    cdef:
+        dict resdic = {}
+    pool = Pool(processes=nproc)
+    align_func = partial(seq_vs_db, seqs=seqs2, mat=mat, decs=decs, thres=thres,
+                         localize=localize)
+    resd = pool.map(align_func, seqs1)
+    for i in range(len(resd)):
+        d = resd[i]
+        if not d == {}:
+            resdic[i] = resd[i]
+    pool.close()
+    return resdic
+
+
 def alldb_comp(list seqs, np.ndarray[DTYPEF_t, ndim=2] mat, dict decs,
                float thres=1.0, bool localize=False, int nproc=2):
     """Align all the ESS in the database (seqs) and return the results in form 
@@ -458,7 +519,7 @@ def alldb_comp(list seqs, np.ndarray[DTYPEF_t, ndim=2] mat, dict decs,
                 captured will be score <= thres.
     localize -- Score the alignment in the segment covered by te smallest ESS 
                 (default False)
-    nproc    -- Number of cores used (default 2)
+    nproc    -- Number of cores to use (default 2)
     """
     cdef:
         indices = list(range(len(seqs)))
@@ -538,6 +599,7 @@ def alldb_shared(seqs,  mat,  decs, thres=1.0, localize=False,
     align_func = partial(_fill_mat, seqs=seqs, mat=mat, decs=decs,
                          thres=thres, localize=localize)
     pool.map(align_func, indices, chunksize=nproc)
+    pool.close()
     return scomat
 
 
@@ -576,3 +638,47 @@ def _fill_mat(ind, seqs, mat, decs, localize, float thres):
         sco = NW(mat, decs, seq1, seq2, oscore=True,
                  localize=localize)
         scomat[ind, j] = sco
+
+
+def sotre_dict(rdict):
+    """Stores the scores result dict as a tab separated 
+    Keyword Arguments:
+    rdict -- 
+    """
+
+
+def store_dict(fname, rdict, dbfix=False):
+    """Stores the scores of the alignments in a tab separated text
+    file. The first column corresponds to the first sequence index
+    the scond column to the second index and the third column to 
+    the score.
+
+    Keyword Arguments:
+    fname -- Str, file name
+    rdict -- Dict, result dictionary
+    dbfix -- (default False)
+    """
+    lines = []
+    for i, dic in rdict.items():
+        for j, sco in dic.items():
+            lines.append('{}\t{}\t{}\n'.format(i, j, sco))
+    with open(fname, 'w') as outf:
+        outf.write('\n'.join(lines))
+
+
+def store_dict2(fname, rdict, dbfix=False):
+    """Stores the scores of the alignments in a tab separated text
+    file. The first column corresponds to the first sequence index
+    the scond column to the second index and the third column to 
+    the score.
+
+    Keyword Arguments:
+    fname -- Str, file name
+    rdict -- Dict, result dictionary
+    dbfix -- (default False)
+    """
+    outf = open(fname, 'w', buffering=1000)
+    for i, dic in rdict.items():
+        for j, sco in dic.items():
+            line = '{}\t{}\t{}\n'.format(i, j, sco)
+            outf.write(line)
