@@ -1,11 +1,33 @@
-#- pytest suit
-#- test for nw_ec_alignx.pyx
+#!/usr/bin/python
+# -*- coding: utf-8 -*-
+#
+# ------------------------------
+# Name:     test_nwx.py
+# Purpose:  Testing of nw_ec_alignx and alignESS modules
+#
+# @uthor:      acph - dragopoot@gmail.com
+#
+# Created:     Sep 2017, after shock!
+# Copyright:   (c) acph 2017
+# Licence:     GNU GENERAL PUBLIC LICENSE, Version 3, 29 June 2007
+# ------------------------------
+"""Testing of nw_ec_alignx and alignESS modules"""
 
+import os
+import sys
 import pytest
-from random import choice, randint
-import pyximport
-import alignESS
-import nw_ec_align as nw
+from random import choice
+# Fixing path for pytest
+mod_path = os.path.abspath(__file__)
+mod_path = os.path.dirname(mod_path)
+sys.path.insert(0, mod_path + '/../')
+# --End Fixing path fro pytest
+pyximport = pytest.importorskip('pyximport')
+alignESS = pytest.importorskip('alignESS')
+try:
+    import nw_ec_align as nw
+except ImportError:
+    pass
 pyximport.install()
 import nw_ec_alignx as nwx
 
@@ -43,6 +65,19 @@ def hmat():
     return alignESS.hmat
 
 
+###########
+# Markers #
+###########
+skipif = pytest.mark.skipif
+oldnw = pytest.mark.skipif('nw_ec_align' not in sys.modules,
+                           reason='Requires nw_ec_align legacy version')
+
+#####################
+# Testing algorithm #
+#####################
+
+
+@oldnw
 def test_scoring(seqs, seqs_s, decs, lecs, hmat):
     """Test for similarity in old and new alignmet scoring
     """
@@ -64,6 +99,7 @@ def test_scoring(seqs, seqs_s, decs, lecs, hmat):
         assert abs(sco - scos) <= 1e-6
 
 
+@oldnw
 def test_NW_score(hmat, decs, lecs):
     """Test for similarity in old and new alignment scoring
     Complete NW version
@@ -87,6 +123,10 @@ def test_NW_score(hmat, decs, lecs):
             score_new_loc = nwx.NW(hmat, decs, i, j, localize=True)[2]
             assert abs(score_old_loc - score_new_loc) <= 1e-2
 
+
+#################################
+# Testing multiple comparissons #
+#################################
 
 def test_indvsalldb_len(seqs, decs, hmat):
     """Test for the correct length of ind_vs_alldb
@@ -157,3 +197,22 @@ def test_listvsalldb_len(seqs, decs, hmat):
     assert len(scoreswhole) == 3
     assert len(scoreswhole[5]) < 100
     assert len(scoreswhole[80]) < 100
+
+
+#########################
+# Testing loading files #
+#########################
+
+@skipif((not os.path.exists('tests/random_index.txt') or
+         not os.path.exists('tests/random_noindex.txt')),
+        reason='Test files are not present.')
+def test_loadtxt():
+    fname1 = 'tests/random_index.txt'
+    fname2 = 'tests/random_noindex.txt'
+
+    ess = alignESS.load_txt(fname1, index=True)
+    assert type(ess) == dict
+    es = list(ess.keys())[0]
+    assert type(ess[es]) == list
+    ess = alignESS.load_txt(fname2, index=False)
+    assert type(ess) == list

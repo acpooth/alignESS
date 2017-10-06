@@ -75,8 +75,8 @@ def _FastNW(np.ndarray[DTYPEF_t, ndim=2] mat, dict ecs, list seq1, list seq2,
     mini = 0
     l1, l2 = len(seq1), len(seq2)
     # Create the score and arrow matrices
-    cdef np.ndarray[DTYPEF_t, ndim = 2] scoremat = np.zeros((l1 + 1, l2 + 1), DTYPEF)
-    cdef np.ndarray[DTYPE_t, ndim = 2] arrow = np.zeros((l1 + 1, l2 + 1), DTYPE)
+    cdef np.ndarray[DTYPEF_t, ndim= 2] scoremat = np.zeros((l1 + 1, l2 + 1), DTYPEF)
+    cdef np.ndarray[DTYPE_t, ndim= 2] arrow = np.zeros((l1 + 1, l2 + 1), DTYPE)
     # Create first row and first column with gaps
     for i in range(l2 + 1):
         scoremat[0, i] = i * gap
@@ -105,7 +105,7 @@ def _FastNW(np.ndarray[DTYPEF_t, ndim=2] mat, dict ecs, list seq1, list seq2,
     return arrow, mini
 
 
-cdef gappen(list seq1, list seq2):
+cdef gappen(seq1, seq2):
     """Returns the number
     Keyword Arguments:
     list seq1 --
@@ -244,7 +244,7 @@ cdef gappen(list seq1, list seq2):
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
-def scoring(np.ndarray[DTYPEF_t, ndim=2] mat, dict ecs, list seq1, list seq2,
+def scoring(np.ndarray[DTYPEF_t, ndim=2] mat, dict ecs, seq1, seq2,
             float gap=1, float fhomo=0.95, float fpengap=0.05):
     """ This function evaluates a pair of alignmed ESS and returns an entroy
     based similarity (distance) score. This value is in the range 0-1. 0 means
@@ -640,33 +640,26 @@ def _fill_mat(ind, seqs, mat, decs, localize, float thres):
         scomat[ind, j] = sco
 
 
-def sotre_dict(rdict):
-    """Stores the scores result dict as a tab separated 
-    Keyword Arguments:
-    rdict -- 
-    """
+# def store_dict(fname, rdict, dbfix=False):
+#     """Stores the scores of the alignments in a tab separated text
+#     file. The first column corresponds to the first sequence index
+#     the scond column to the second index and the third column to
+#     the score.
+
+#     Keyword Arguments:
+#     fname -- Str, file name
+#     rdict -- Dict, result dictionary
+#     dbfix -- (default False)
+#     """
+#     lines = []
+#     for i, dic in rdict.items():
+#         for j, sco in dic.items():
+#             lines.append('{}\t{}\t{}\n'.format(i, j, sco))
+#     with open(fname, 'w') as outf:
+#         outf.write('\n'.join(lines))
 
 
 def store_dict(fname, rdict, dbfix=False):
-    """Stores the scores of the alignments in a tab separated text
-    file. The first column corresponds to the first sequence index
-    the scond column to the second index and the third column to 
-    the score.
-
-    Keyword Arguments:
-    fname -- Str, file name
-    rdict -- Dict, result dictionary
-    dbfix -- (default False)
-    """
-    lines = []
-    for i, dic in rdict.items():
-        for j, sco in dic.items():
-            lines.append('{}\t{}\t{}\n'.format(i, j, sco))
-    with open(fname, 'w') as outf:
-        outf.write('\n'.join(lines))
-
-
-def store_dict2(fname, rdict, dbfix=False):
     """Stores the scores of the alignments in a tab separated text
     file. The first column corresponds to the first sequence index
     the scond column to the second index and the third column to 
