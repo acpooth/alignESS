@@ -75,8 +75,8 @@ def _FastNW(np.ndarray[DTYPEF_t, ndim=2] mat, dict ecs, list seq1, list seq2,
     mini = 0
     l1, l2 = len(seq1), len(seq2)
     # Create the score and arrow matrices
-    cdef np.ndarray[DTYPEF_t, ndim= 2] scoremat = np.zeros((l1 + 1, l2 + 1), DTYPEF)
-    cdef np.ndarray[DTYPE_t, ndim= 2] arrow = np.zeros((l1 + 1, l2 + 1), DTYPE)
+    cdef np.ndarray[DTYPEF_t, ndim = 2] scoremat = np.zeros((l1 + 1, l2 + 1), DTYPEF)
+    cdef np.ndarray[DTYPE_t, ndim = 2] arrow = np.zeros((l1 + 1, l2 + 1), DTYPE)
     # Create first row and first column with gaps
     for i in range(l2 + 1):
         scoremat[0, i] = i * gap
@@ -640,38 +640,56 @@ def _fill_mat(ind, seqs, mat, decs, localize, float thres):
         scomat[ind, j] = sco
 
 
-# def store_dict(fname, rdict, dbfix=False):
-#     """Stores the scores of the alignments in a tab separated text
-#     file. The first column corresponds to the first sequence index
-#     the scond column to the second index and the third column to
-#     the score.
-
-#     Keyword Arguments:
-#     fname -- Str, file name
-#     rdict -- Dict, result dictionary
-#     dbfix -- (default False)
-#     """
-#     lines = []
-#     for i, dic in rdict.items():
-#         for j, sco in dic.items():
-#             lines.append('{}\t{}\t{}\n'.format(i, j, sco))
-#     with open(fname, 'w') as outf:
-#         outf.write('\n'.join(lines))
-
-
-def store_dict(fname, rdict, dbfix=False):
+def store_dict(fname, rdict, indices=None, indices2=None):
     """Stores the scores of the alignments in a tab separated text
     file. The first column corresponds to the first sequence index
     the scond column to the second index and the third column to 
     the score.
 
     Keyword Arguments:
-    fname -- Str, file name
-    rdict -- Dict, result dictionary
-    dbfix -- (default False)
+    fname    -- Str, file name
+    rdict    -- Dict, result dictionary
+    indices  -- List, indices to translate (default None)
+    indices2 -- List, indices to translate (default None) if there
+                is a second database. In this case the this list is 
+                used to translate the indices in the internal dictionaries
     """
     outf = open(fname, 'w', buffering=1000)
-    for i, dic in rdict.items():
-        for j, sco in dic.items():
-            line = '{}\t{}\t{}\n'.format(i, j, sco)
+    testval = list(rdict.values())[0]
+    if type(testval) == float and not indices:
+        for i, sco in rdict.items():
+            line = '{}\t{}\n'.format(i, sco)
             outf.write(line)
+    elif type(testval) == float:
+        for i, sco in rdict.items():
+            i = indices[i]
+            line = '{}\t{}\n'.format(i, sco)
+            outf.write(line)
+
+    elif not indices and not indices2:
+        for i, dic in rdict.items():
+            for j, sco in dic.items():
+                line = '{}\t{}\t{}\n'.format(i, j, sco)
+                outf.write(line)
+    elif indices and not indices2:
+        for i, dic in rdict.items():
+            for j, sco in dic.items():
+                ind1 = indices[i]
+                ind2 = j
+                line = '{}\t{}\t{}\n'.format(ind1, ind2, sco)
+                outf.write(line)
+    elif not indices and indices2:
+        for i, dic in rdict.items():
+            for j, sco in dic.items():
+                ind1 = i
+                ind2 = indices2[j]
+                line = '{}\t{}\t{}\n'.format(ind1, ind2, sco)
+                outf.write(line)
+    else:
+        for i, dic in rdict.items():
+            for j, sco in dic.items():
+                ind1 = indices[i]
+                ind2 = indices2[j]
+                line = '{}\t{}\t{}\n'.format(ind1, ind2, sco)
+                outf.write(line)
+    outf.close()

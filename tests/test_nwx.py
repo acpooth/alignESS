@@ -31,8 +31,8 @@ except ImportError:
 pyximport.install()
 import nw_ec_alignx as nwx
 
-decs = alignESS.decs
-hmat = alignESS.hmat
+#decs = alignESS.decs
+#hmat = alignESS.hmat
 
 
 @pytest.fixture(scope="module")
@@ -69,8 +69,19 @@ def hmat():
 # Markers #
 ###########
 skipif = pytest.mark.skipif
+xfail = pytest.mark.xfail
 oldnw = pytest.mark.skipif('nw_ec_align' not in sys.modules,
                            reason='Requires nw_ec_align legacy version')
+
+skipifnotfiles = skipif((not os.path.exists('tests/random_frag_ind.txt') or
+                         not os.path.exists('tests/random_frag.txt') or
+                         not os.path.exists('tests/nr_part.db') or
+                         not os.path.exists('tests/part_name.txt')),
+                        reason="""At least one test file is not present:
+./tests/random_frag.txt
+        random_frag_ind.txt
+        nr_part.db
+        part_name.txt """)
 
 #####################
 # Testing algorithm #
@@ -203,16 +214,45 @@ def test_listvsalldb_len(seqs, decs, hmat):
 # Testing loading files #
 #########################
 
-@skipif((not os.path.exists('tests/random_index.txt') or
-         not os.path.exists('tests/random_noindex.txt')),
-        reason='Test files are not present.')
+@skipifnotfiles
 def test_loadtxt():
-    fname1 = 'tests/random_index.txt'
-    fname2 = 'tests/random_noindex.txt'
+    fname1 = 'tests/random_frag_ind.txt'
+    fname2 = 'tests/random_frag.txt'
 
     ess = alignESS.load_txt(fname1, index=True)
-    assert type(ess) == dict
-    es = list(ess.keys())[0]
-    assert type(ess[es]) == list
+    assert type(ess) == tuple
+    assert len(ess) == 2
+    es = ess[0][0]
+    assert type(es) == list
     ess = alignESS.load_txt(fname2, index=False)
     assert type(ess) == list
+
+
+@skipifnotfiles
+def test_loadsqlite():
+    sqlname = 'tests/nr_part.db'
+    ess = alignESS.load_sqlite(sqlname)
+    assert type(ess) == tuple
+    assert len(ess) == 2
+    assert type(ess[0][0]) == list
+
+#####################
+# Testing utilities #
+#####################
+
+
+@skipifnotfiles
+def test_esstype():
+    ess_type = alignESS._ess_type
+    assert ess_type('tests/random_frag.txt') == 'text_noind'
+    assert ess_type('tests/random_frag_ind.txt') == 'text_ind'
+    assert ess_type('tests/part_name.txt') == 'text_ind'
+    assert ess_type('tests/nr_part.db') == 'sqlite'
+    assert ess_type('tests/test_nwx.py') == 'file'
+    assert ess_type('1.2.3:1.3.4:3.5.-') == 'ess'
+
+
+@xfail(reason='Must raise exception', strict=True)
+def test_esstype_fail():
+    ess_type = alignESS._ess_type
+    assert ess_type('1.2.3')

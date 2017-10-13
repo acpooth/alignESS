@@ -15,13 +15,13 @@
 """Program to align Enzimatic Step Sequences (ESS) using dynamic programming"""
 
 import os
+import sys
 import argparse
 import numpy as np
 import sqlite3 as s3
 import pyximport
 pyximport.install()
 import nw_ec_alignx as nwx
-
 
 # load similarity matrix
 matfile = 'h_ent_mat.npz'       # ecs_entropy.py generated file
@@ -57,7 +57,7 @@ def load_txt(fname, index=False, sep='\t'):
     index -- If True, each line is splited according to sep (default False).
              The first element is trated as index and the second as the ESS.
              If the line contains more elements, will be ignored.
-    sep   -- (default '\t')
+    sep   -- String that separates fields (default TAB)
     """
     if not index:
         with open(fname) as inf:
@@ -71,13 +71,15 @@ def load_txt(fname, index=False, sep='\t'):
             esss = inf.read()
         esss = esss.split('\n')
         assert len(esss[0].split(sep)) >= 2, 'Lines must contain index and ESS'
-        essdic = {}
+        esslist = []
+        indexlist = []
         for es in esss:
             if es == '':
                 continue
             es = es.split(sep)
-            essdic[es[0]] = es[1].split(':')
-        return essdic
+            esslist.append(es[1].split(':'))
+            indexlist.append(es[0])
+        return esslist, indexlist
 
 
 def load_sqlite(dbf, table='nrseqs', length=1):
@@ -108,7 +110,6 @@ def load_sqlite(dbf, table='nrseqs', length=1):
                 esss.append(ess)
     return esss, ids
 
-
 ######################
 # Alignment wrappers #
 ######################
@@ -126,6 +127,10 @@ def alignESS(seq1, seq2, gap=0.9):
     seq2 = seq2.split(':')
     seq1, seq2, score = nwx.NW(hmat, decs, seq1, seq2, gap=gap)
     return seq1, seq2, score
+
+##########
+# Parser #
+##########
 
 
 def arg_parser(get_parser=False):
@@ -158,16 +163,17 @@ def arg_parser(get_parser=False):
                      or text file with one ESS in each line. If the essdb2
                      argument is not specified, the program performs the
                      all-vs-all alignment in essdb1. This argument
-                     also can be a sigle ESS''')
+                     also can be a sigle ESS, in this case the -db2 argument
+                     is necessary''')
     dbp.add_argument('-db2', '--essdb2', type=str,
                      help='''ESSs databse 2. Sqlite3 file with nrseqs table
                      or text file with one ESS in each line''')
-    dbp.add_argument('outfile', type=str,
+    dbp.add_argument('-o', '--outfile', type=str,  default='output.txt',
                      help="""Outfile name to report scores. By default the
                      file only contains the id of the ESSs and the score
-                     of the alignment. If argument '-align' is set, then 
+                     of the alignment. If argument '-align' is set, then
                      the file contains the alignment of ESSs""")
-    dbp.add_argument('-t', '--threshold', type=float, default=0.6,
+    dbp.add_argument('-t', '--threshold', type=float, default=0.3,
                      help='''Threshold score to filter results in the
                      range 0-1 [0.3]. If the threshold is high (>0.6) and
                      the databases are large, results may saturate the
@@ -181,15 +187,92 @@ def arg_parser(get_parser=False):
                      help='''If set, the outputfile contains the alignment
                      of each ESS pair bellow the threshold. Beware, if the
                      databases are large, the file may be huge''')
-    # -align argument
+    # localize argument
     # Multiple Alignment
     multip = subparsers.add_parser('multi',
                                    help='ESSs multiple alignment')
+    multip.add_argument('ESSs', type=str, metavar='FILENAME',
+                        help='''ESSs file. Each line must contain an ESS id
+                        and the ESS separeated by a TAB''')
+    multip.add_argument('-p', '--pcomp', type=str, metavar='FILENAME',
+                        help='''If spificied, stores the pairwise comparisson
+                        of the ESSs in the ESSs file''')
     # -
     if get_parser:
         return parser
     args = parser.parse_args()
     return args
+
+################
+# Main helpers #
+################
+
+
+def _ess_type(input_str):
+    """Returns the type of ESSs recived by command line
+    ['ess', 'sqdb', 'textdb']
+
+    Keyword Arguments:
+    input_str -- string from command line
+    """
+    if os.path.exists(input_str):  # is it a file?
+        if '.db' in input_str:
+            answer = 'sqlite'
+        elif '.txt' in input_str:
+            with open(input_str) as inf:
+                line = inf.readline()
+            line = line.split('\t')
+            if len(line) == 1:
+                answer = 'text_noind'
+            elif len(line) >= 2:
+                answer = 'text_ind'
+        else:
+            answer = 'file'
+    else:                       # is it a ESS?
+        # asuming the count of : and .
+        # for each : you need 2(.) + 2
+        colons = input_str.count(':')
+        points = input_str.count('.')
+        if (colons >= 1
+                and points == colons * 2 + 2):
+            answer = 'ess'
+        else:
+            print('File not found or ESS in wrong format')
+            print('Exiting')
+            raise FileNotFoundError('''"{}" file not found or wrong ESS
+format.'''.format(input_str))
+    return answer
+
+
+def _loaddb(fname):
+    """Load a database according to type
+
+    Keyword Arguments:
+    fname -- filename
+    """
+    _type = _ess_type(fname)
+    if _type == 'sqlite':
+        return load_sqlite(fname)
+    elif _type == 'text_ind':
+        return load_txt(fname, index=True, sep='\t')
+    elif _type == 'text_noind':
+        return load_txt(fname), None
+    elif _type == 'file':
+        return load_txt(fname)
+    else:
+        print('Something is really wierd')
+
+
+def _load_multi(fname):
+    """Loads a multiple alignment filename.
+    2 columns tabular format:
+    Col 1 = ESS name
+    Col 2 = ESS 
+
+    Keyword Arguments:
+    fname -- filename
+    """
+    pass
 
 ##################
 # Main functions #
@@ -197,8 +280,7 @@ def arg_parser(get_parser=False):
 
 
 def main_pair(args):
-    """Main function for pair subcommands
-
+    """Main function for pair subcommand
     """
     from sys import stdout
     seq1, seq2, score = alignESS(args.ess1, args.ess2, gap=args.gap)
@@ -207,15 +289,74 @@ def main_pair(args):
     stdout.write('score = {}\n'.format(score))
 
 
-def main():
+def main_db(args):
+    """Main function for dbalign subcomand
+    """
+    print('------ Opening databases:')
+    typ1 = _ess_type(args.essdb1)
+    print(args.essdb1, '(', typ1, ')')
+    if args.essdb2:
+        typ2 = _ess_type(args.essdb2)
+        assert typ2 != 'ess', '-db2 must be a database, not an ESS'
+        print(args.essdb2, '(', typ2, ')')
+    # Checking types
+    if not args.essdb2:
+        if typ1 == 'ess':
+            print('#' * 20)
+            print('Warning!!! ---------')
+            print('When using an ESS as input, you need to spicify ' +
+                  'an ESS database in -db2 argument.')
+            print('Exit program!!! :D try again!!!')
+            exit()
+        db1, indices = _loaddb(args.essdb1)
+        print('------ Aligning all vs all...')
+        print('Number of processes: {}'.format(args.nproc))
+        scores = nwx.alldb_comp(db1, hmat, decs, thres=args.threshold,
+                                nproc=args.nproc,
+                                # localize=args.localize,
+                                )
+        print('------ Storing data:', args.outfile)
+        nwx.store_dict(args.outfile, scores, indices=indices)
+        print('Done :D!!!, see you soon!!!')
+        exit()
+    if typ1 == 'ess':
+        db2, ind2 = _loaddb(args.essdb2)
+        print('------ Aligning ESS vs DB ------')
+        print('Number of processes: 1 (fixed)')
+        ess = args.essdb1.split(':')
+        scores = nwx.seq_vs_db(ess, db2, hmat, decs, thres=args.threshold,
+                               # localize=args.localize
+                               )
+        print('------ Storing data:', args.outfile)
+        nwx.store_dict(args.outfile, scores, indices=ind2)
+        print('Done :D!!!, see you soon!!!')
+    else:
+        db1, ind1 = _loaddb(args.essdb1)
+        db2, ind2 = _loaddb(args.essdb2)
+        print('------ Aligning both databases ------')
+        print('Number of processes: {}'.format(args.nproc))
+        scores = nwx.db_vs_db(db1, db2, hmat, decs, thres=args.threshold,
+                              nproc=args.nproc,
+                              # localize=args.localize
+                              )
+        print('------ Storing data:', args.outfile)
+        nwx.store_dict(args.outfile, scores, indices=ind1, indices2=ind2)
+        print('Done :D!!!, see you soon!!!')
 
+
+def main_multi(args):
+    """Main function for multiple alignment
+    """
+
+
+def main():
     args = arg_parser()
     if args.command == 'pair':
         main_pair(args)
     elif args.command == 'dbalign':
-        print(args.command)
+        main_db(args)
     elif args.command == 'multi':
-        print(args.command)
+        print(args)
     elif args.command is None:
         parser = arg_parser(True)
         parser.print_help()
