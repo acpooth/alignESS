@@ -191,9 +191,13 @@ def arg_parser(get_parser=False):
     # Multiple Alignment
     multip = subparsers.add_parser('multi',
                                    help='ESSs multiple alignment')
-    multip.add_argument('ESSs', type=str, metavar='FILENAME',
-                        help='''ESSs file. Each line must contain an ESS id
-                        and the ESS separeated by a TAB''')
+    multip.add_argument('multifile', type=str, metavar='FILENAME',
+                        help='''ESSs file. Each line must contain an ESS name
+                        and the ESS separeated by a TAB.
+                        Accepts commentaries with '#' ''')
+    multip.add_argument('-o', '--multiout', type=str, metavar='OUTPUTFILE',
+                        default='multiout.txt',
+                        help='''Multiple alignment outputfile''')
     multip.add_argument('-p', '--pcomp', type=str, metavar='FILENAME',
                         help='''If spificied, stores the pairwise comparisson
                         of the ESSs in the ESSs file''')
@@ -269,10 +273,26 @@ def _load_multi(fname):
     Col 1 = ESS name
     Col 2 = ESS 
 
+    accept commentaries with #
+
     Keyword Arguments:
     fname -- filename
     """
-    pass
+    names = []
+    esss = []
+    with open(fname) as inf:
+        for line in inf:
+            line = line.strip()
+            if not line:
+                continue
+            if line[0] == '#':
+                continue
+            name, ess = line.split('\t')
+            ess = ess.split(':')
+            names.append(name)
+            esss.append(ess)
+    return esss, names
+
 
 ##################
 # Main functions #
@@ -347,6 +367,66 @@ def main_db(args):
 def main_multi(args):
     """Main function for multiple alignment
     """
+    # pcomp
+    import tempfile
+    from subprocess import run, PIPE
+    print('------ Loading file')
+    print(args.multifile)
+    esss, names = _load_multi(args.multifile)
+    print('------ Making pairwise comparissons')
+    pairs = nwx.alldb_comp(esss, hmat, decs)  # pair align
+    if args.pcomp:
+        nwx.store_dict('args.pcomp', pairs)
+    # create temp files
+    tempsco = tempfile.NamedTemporaryFile(mode='w+t', dir='.')
+    templist = tempfile.NamedTemporaryFile(mode='w+t', dir='.')
+    # fill files
+    for i, nam in enumerate(names):
+        ess = ':'.join(esss[i])
+        line = "{}\t{}\t{}\n".format(i, nam, ess)
+        templist.write(line)
+    for i, dic_ in pairs.items():
+        for j, sco in dic_.items():
+            line = "{}\t{}\t{}\n".format(i, j, sco)
+            tempsco.write(line)
+    # rewind files
+    tempsco.seek(0)
+    templist.seek(0)
+    # Run multiple alignment
+    binpath = os.path.join(exedir, 'bin/AlineaMultiple')
+    npob, ngen, cross, mut = '100', '200', '0.7', '0.1'
+    pengap, homo, peninc = '0.05', '0.9', '0.05'
+    cmd = [binpath, templist.name, tempsco.name,
+           npob, ngen, cross, mut, pengap, homo, peninc, '1']
+    print('------ Building multiple alignment')
+    print("""- Genetic algorithm parameters:
+Population: {}
+Max generations: {}
+Crossover prob: {}
+Mutation prob: {}
+- Objetive function parameters (must sum 1):
+Gap penalization: {}
+Homogeneity: {}
+Column increment penalization:{}
+""".format(npob, ngen, cross, mut, pengap, homo, peninc))
+    malign = run(cmd, stdout=PIPE)
+    malign = malign.stdout.decode('utf8')
+    # End temp files
+    tempsco.close()
+    templist.close()
+    print('------ Creating file')
+    print(args.multiout)
+    with open(args.multiout, 'w') as outf:
+        for line in malign.split('\n'):
+            if line == '':
+                continue
+            elif line[0] == 'F':
+                newl = '# ' + line + '\n'
+            else:
+                line = line.split('\t')
+                newl = '{}\t{}\n'.format(line[1], line[2])
+            outf.write(newl)
+    print('Done!!! :D, come again. ')
 
 
 def main():
@@ -356,7 +436,7 @@ def main():
     elif args.command == 'dbalign':
         main_db(args)
     elif args.command == 'multi':
-        print(args)
+        main_multi(args)
     elif args.command is None:
         parser = arg_parser(True)
         parser.print_help()

@@ -256,3 +256,16 @@ def test_esstype():
 def test_esstype_fail():
     ess_type = alignESS._ess_type
     assert ess_type('1.2.3')
+
+
+@skipif(not os.path.exists('tests/multi.txt'),
+        reason='File not found')
+def test_loadmulti():
+    load_multi = alignESS._load_multi
+    ess, names = load_multi('tests/multi.txt')
+    assert type(ess[0]) == list
+    assert type(names[0]) == str
+    assert len(ess) == 8
+    assert len(names) == 8
+    assert len(ess[0]) == 6
+    assert 'Glycolysis' in names[3]
