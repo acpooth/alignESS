@@ -285,7 +285,7 @@ def _load_multi(fname):
             line = line.strip()
             if not line:
                 continue
-            if line[0] == '#':
+            if line[0] == '#' or line[0] == '>':
                 continue
             name, ess = line.split('\t')
             ess = ess.split(':')
@@ -336,7 +336,7 @@ def main_db(args):
                                 # localize=args.localize,
                                 )
         print('------ Storing data:', args.outfile)
-        nwx.store_dict(args.outfile, scores, indices=indices)
+        nwx.store_dict(args.outfile, scores, indices=indices, indices2=indices)
         print('Done :D!!!, see you soon!!!')
         exit()
     if typ1 == 'ess':
