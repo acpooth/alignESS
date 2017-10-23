@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/python3
 # -*- coding: utf-8 -*-
 #
 # ------------------------------
@@ -12,7 +12,8 @@
 # Copyright:   (c) acph 2017
 # Licence:     GNU GENERAL PUBLIC LICENSE, Version 3, 29 June 2007
 # ------------------------------
-"""Program to align Enzimatic Step Sequences (ESS) using dynamic programming"""
+"""Program to align Enzimatic Step Sequences (ESS) using Dynamic Programming (DP)
+and Genetic Algorithms (GA)"""
 
 import os
 import sys
@@ -148,7 +149,7 @@ def arg_parser(get_parser=False):
                                        dest='command')
     # Pair alignment
     pairp = subparsers.add_parser('pair',
-                                  help='ESS command line pairwise comparisson')
+                                  help='ESS command line pairwise comparisson using DP')
     pairp.add_argument('ess1', type=str,
                        help='''ESS (3 levels EC numbers). Colon separated.
                         (1.2.3:3.5.-:...:9.9.9)''')
@@ -157,7 +158,7 @@ def arg_parser(get_parser=False):
                         (1.2.3:3.5.-:...:9.9.9)''')
     # DB alignment
     dbp = subparsers.add_parser('dbalign',
-                                help='ESSs database(s) alignment')
+                                help='ESSs database(s) alignment using DP')
     dbp.add_argument('essdb1', type=str,
                      help='''ESSs database 1. Sqlite3 file with nrseqs table
                      or text file with one ESS in each line. If the essdb2
@@ -191,7 +192,7 @@ def arg_parser(get_parser=False):
     # localize argument
     # Multiple Alignment
     multip = subparsers.add_parser('multi',
-                                   help='ESSs multiple alignment')
+                                   help='ESSs multiple alignment using GA')
     multip.add_argument('multifile', type=str, metavar='FILENAME',
                         help='''ESSs file. Each line must contain an ESS name
                         and the ESS separeated by a TAB.
