@@ -171,8 +171,8 @@ def arg_parser(get_parser=False):
     dbp.add_argument('-o', '--outfile', type=str,  default='output.txt',
                      help="""Outfile name to report scores. By default the
                      file only contains the id of the ESSs and the score
-                     of the alignment. If argument '-align' is set, then
-                     the file contains the alignment of ESSs""")
+                     of the alignment. (TO DO ->>If argument '-align' is set, then
+                     the file contains the alignment of ESSs)""")
     dbp.add_argument('-t', '--threshold', type=float, default=0.3,
                      help='''Threshold score to filter results in the
                      range 0-1 [0.3]. If the threshold is high (>0.6) and
@@ -183,10 +183,11 @@ def arg_parser(get_parser=False):
                      It can be created more processes than cores in the
                      the processor, so the speedup of the analysis
                      depends on the number of cores available''')
+    # TO DO ..
     dbp.add_argument('-align', action='store_true',
                      help='''If set, the outputfile contains the alignment
                      of each ESS pair bellow the threshold. Beware, if the
-                     databases are large, the file may be huge''')
+                     databases are large, the file may be huge (TO DO)''')
     # localize argument
     # Multiple Alignment
     multip = subparsers.add_parser('multi',
@@ -393,7 +394,8 @@ def main_multi(args):
     tempsco.seek(0)
     templist.seek(0)
     # Run multiple alignment
-    binpath = os.path.join(exedir, 'bin/AlineaMultiple')
+    binf = 'bin/AlineaMultiple'
+    binpath = os.path.join(exedir, binf)
     npob, ngen, cross, mut = '100', '200', '0.7', '0.1'
     pengap, homo, peninc = '0.05', '0.9', '0.05'
     cmd = [binpath, templist.name, tempsco.name,
