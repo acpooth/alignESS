@@ -21,7 +21,8 @@ import argparse
 import numpy as np
 import sqlite3 as s3
 import pyximport
-pyximport.install()
+pyximport.install(setup_args={"include_dirs":np.get_include()},
+                  reload_support=True)
 import nw_ec_alignx as nwx
 
 # load similarity matrix
@@ -339,8 +340,7 @@ def main_db(args):
                                 )
         print('------ Storing data:', args.outfile)
         nwx.store_dict(args.outfile, scores, indices=indices, indices2=indices)
-        print('Done :D!!!, see you soon!!!')
-        exit()
+        # exit()
     if typ1 == 'ess':
         db2, ind2 = _loaddb(args.essdb2)
         print('------ Aligning ESS vs DB ------')
@@ -350,8 +350,11 @@ def main_db(args):
                                # localize=args.localize
                                )
         print('------ Storing data:', args.outfile)
-        nwx.store_dict(args.outfile, scores, indices=ind2)
-        print('Done :D!!!, see you soon!!!')
+        print('Number of hits: ', len(scores))
+        if not scores:
+            print('WARNING: 0 hits, file {} not created'.format(args.outfile))
+        else:
+            nwx.store_dict(args.outfile, scores, indices=ind2)
     else:
         db1, ind1 = _loaddb(args.essdb1)
         db2, ind2 = _loaddb(args.essdb2)
@@ -363,7 +366,6 @@ def main_db(args):
                               )
         print('------ Storing data:', args.outfile)
         nwx.store_dict(args.outfile, scores, indices=ind1, indices2=ind2)
-        print('Done :D!!!, see you soon!!!')
 
 
 def main_multi(args):
@@ -429,7 +431,6 @@ Column increment penalization:{}
                 line = line.split('\t')
                 newl = '{}\t{}\n'.format(line[1], line[2])
             outf.write(newl)
-    print('Done!!! :D, come again. ')
 
 
 def main():
@@ -447,3 +448,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+    print('>>> Done!!! <<<')
+    print(':D, see you soon.')

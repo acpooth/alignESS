@@ -210,9 +210,9 @@ def test_listvsalldb_len(seqs, decs, hmat):
     assert len(scoreswhole[80]) < 100
 
 
-#########################
-# Testing loading files #
-#########################
+###############
+# Testing I/O #
+###############
 
 @skipifnotfiles
 def test_loadtxt():
@@ -235,6 +235,14 @@ def test_loadsqlite():
     assert type(ess) == tuple
     assert len(ess) == 2
     assert type(ess[0][0]) == list
+
+
+def test_storedict_empty():
+    "test for store_dict empty"
+    scores = {}
+    fname = 'pru.txt'
+    nwx.store_dict(fname, scores)
+
 
 #####################
 # Testing utilities #

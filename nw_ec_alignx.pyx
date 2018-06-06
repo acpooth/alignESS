@@ -654,6 +654,8 @@ def store_dict(fname, rdict, indices=None, indices2=None):
                 is a second database. In this case the this list is 
                 used to translate the indices in the internal dictionaries
     """
+    if not rdict:
+        return
     outf = open(fname, 'w', buffering=1000)
     testval = list(rdict.values())[0]
     if type(testval) == float and not indices:
