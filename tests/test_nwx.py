@@ -31,8 +31,9 @@ except ImportError:
 pyximport.install()
 import nw_ec_alignx as nwx
 
-#decs = alignESS.decs
-#hmat = alignESS.hmat
+# use fixtures instead these commands
+# decs = alignESS.decs
+# hmat = alignESS.hmat
 
 
 @pytest.fixture(scope="module")
@@ -277,3 +278,38 @@ def test_loadmulti():
     assert len(names) == 8
     assert len(ess[0]) == 6
     assert 'Glycolysis' in names[3]
+
+
+################################
+# Testing command line options #
+################################
+
+@skipifnotfiles
+def test_singledb():
+    """Using only one database yielded an error because the program tries
+    to use the value in args.db2 variable. In this case this value is None"""
+    parser = alignESS.arg_parser(get_parser=True)
+    args = parser.parse_args(['dbalign', 'tests/nr_part.db'])
+    alignESS.main_db(args)
+    args = parser.parse_args(['dbalign', 'tests/part_name.txt'])
+    alignESS.main_db(args)
+    # comment if the test become slow
+    args = parser.parse_args(['dbalign', 'tests/random_frag.txt'])
+    alignESS.main_db(args)
+    args = parser.parse_args(['dbalign', 'tests/random_frag_ind.txt'])
+    alignESS.main_db(args)
+
+
+@skipifnotfiles
+def test_doubledb():
+    """Using 2 databases should not give any error"""
+    parser = alignESS.arg_parser(get_parser=True)
+    args = parser.parse_args(['dbalign', 'tests/nr_part.db', '-db2',
+                              'tests/nr_part.db'])
+    alignESS.main_db(args)
+    args = parser.parse_args(['dbalign', 'tests/part_name.txt', '-db2',
+                              'tests/nr_part.db'])
+    alignESS.main_db(args)
+    args = parser.parse_args(['dbalign', 'tests/part_name.txt', '-db2',
+                              'tests/random_frag.txt'])
+    alignESS.main_db(args)

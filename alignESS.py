@@ -21,7 +21,7 @@ import argparse
 import numpy as np
 import sqlite3 as s3
 import pyximport
-pyximport.install(setup_args={"include_dirs":np.get_include()},
+pyximport.install(setup_args={"include_dirs": np.get_include()},
                   reload_support=True)
 import nw_ec_alignx as nwx
 
@@ -165,7 +165,7 @@ def arg_parser(get_parser=False):
                      or text file with one ESS in each line. If the essdb2
                      argument is not specified, the program performs the
                      all-vs-all alignment in essdb1. This argument
-                     also can be a sigle ESS, in this case the -db2 argument
+                     also can be a single ESS, in this case the -db2 argument
                      is necessary''')
     dbp.add_argument('-db2', '--essdb2', type=str,
                      help='''ESSs databse 2. Sqlite3 file with nrseqs table
@@ -332,7 +332,7 @@ def main_db(args):
             print('Exit program!!! :D try again!!!')
             exit()
         db1, indices = _loaddb(args.essdb1)
-        print('------ Aligning all vs all...')
+        print('------ Aligning the database with itself (all vs all)...')
         print('Number of processes: {}'.format(args.nproc))
         scores = nwx.alldb_comp(db1, hmat, decs, thres=args.threshold,
                                 nproc=args.nproc,
@@ -340,7 +340,7 @@ def main_db(args):
                                 )
         print('------ Storing data:', args.outfile)
         nwx.store_dict(args.outfile, scores, indices=indices, indices2=indices)
-        # exit()
+        return
     if typ1 == 'ess':
         db2, ind2 = _loaddb(args.essdb2)
         print('------ Aligning ESS vs DB ------')
@@ -356,6 +356,7 @@ def main_db(args):
         else:
             nwx.store_dict(args.outfile, scores, indices=ind2)
     else:
+        # if two databases were speficied
         db1, ind1 = _loaddb(args.essdb1)
         db2, ind2 = _loaddb(args.essdb2)
         print('------ Aligning both databases ------')
