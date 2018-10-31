@@ -39,7 +39,7 @@ import nw_ec_alignx as nwx
 @pytest.fixture(scope="module")
 def seqs_s():
     import sqlite3 as s3
-    with s3.connect('nr.db') as db:
+    with s3.connect('tests/nr_part.db') as db:
         x = db.execute("SELECT ec3 from nrseqs")
         seqs_s = [i[0] for i in x]
     return seqs_s
@@ -136,6 +136,22 @@ def test_NW_score(hmat, decs, lecs):
             assert abs(score_old_loc - score_new_loc) <= 1e-2
 
 
+####################
+# Testing wrappers #
+####################
+
+def test_alignESS_wrap():
+    """Test the correct function of the
+     alignment wrapper."""
+    s1 = '1.2.1:2.7.2:5.4.2:4.2.1:2.7.1'
+    s2 = '9.9.9:3.2.1:5.3.1:3.1.3:4.1.2:1.2.1:5.4.2:4.2.1:2.7.1' + \
+         ':1.2.7:2.3.1:1.8.1'
+    ss1, ss2, s = alignESS.alignESS(s1, s2)
+    ls1, ls2, ls = alignESS.alignESS(s1, s2, localize=True)
+    assert ls < s
+    assert len(ls2) < len(ss1)
+
+
 #################################
 # Testing multiple comparissons #
 #################################
@@ -172,7 +188,7 @@ def test_dbvsdb_len(seqs, decs, hmat):
     """
     subs1 = seqs[:50]
     n1 = len(subs1)
-    subs2 = seqs[100:200]
+    subs2 = seqs[20:60]
     n2 = len(subs2)
     scores = nwx.db_vs_db(subs1, subs2, hmat, decs)
     assert len(scores) == n1
@@ -283,6 +299,26 @@ def test_loadmulti():
 ################################
 # Testing command line options #
 ################################
+
+def test_localize_parser():
+    """Test that the localize option returns True or False correctly"""
+    s1 = '1.2.1:2.7.2:5.4.2:4.2.1:2.7.1'
+    s2 = '9.9.9:3.2.1:5.3.1:3.1.3:4.1.2:1.2.1:5.4.2:4.2.1:2.7.1' + \
+         ':1.2.7:2.3.1:1.8.1'
+    parser = alignESS.arg_parser(get_parser=True)
+    # pair command
+    args = parser.parse_args(['pair', s1, s2])
+    assert args.localize is False
+    args = parser.parse_args(['pair', s1, s2, '-l'])
+    assert args.localize is True
+    alignESS.main_pair(args)
+    # dbalign
+    args = parser.parse_args(['dbalign', 'tests/nr_part.db'])
+    assert args.localize is False
+    args = parser.parse_args(['dbalign', 'tests/nr_part.db', '-l'])
+    assert args.localize is True
+    alignESS.main_db(args)
+
 
 @skipifnotfiles
 def test_singledb():

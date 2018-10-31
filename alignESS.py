@@ -117,17 +117,22 @@ def load_sqlite(dbf, table='nrseqs', length=1):
 ######################
 
 
-def alignESS(seq1, seq2, gap=0.9):
+def alignESS(seq1, seq2, gap=0.9, localize=False):
     """Wrapper for nwx.NW function for ESS alignment
 
     Keyword Arguments:
     seq1 -- ESS 1. str, colon separated EC numbers.
     seq2 -- ESS 1. str, colon separated EC numbers.
     gap  -- Gap penalization.
+    localize -- if localize = True, the funtion returns only
+            the fragment of the alignment covered by the
+            shortest sequence and the score is calculated
+            accordingly
     """
     seq1 = seq1.split(':')
     seq2 = seq2.split(':')
-    seq1, seq2, score = nwx.NW(hmat, decs, seq1, seq2, gap=gap)
+    seq1, seq2, score = nwx.NW(
+        hmat, decs, seq1, seq2, gap=gap, localize=localize)
     return seq1, seq2, score
 
 ##########
@@ -150,13 +155,20 @@ def arg_parser(get_parser=False):
                                        dest='command')
     # Pair alignment
     pairp = subparsers.add_parser('pair',
-                                  help='ESS command line pairwise comparisson using DP')
+                                  help='''ESS command line pairwise 
+                                  comparisson using DP''')
     pairp.add_argument('ess1', type=str,
                        help='''ESS (3 levels EC numbers). Colon separated.
                         (1.2.3:3.5.-:...:9.9.9)''')
     pairp.add_argument('ess2', type=str,
                        help='''ESS (3 levels EC numbers). Colon separated.
                         (1.2.3:3.5.-:...:9.9.9)''')
+    pairp.add_argument('-l', '--localize', action='store_true', default=False,
+                       help='''The alignment is trimmed to the coverage of the
+                       shortest ESS and the score is then calculated to the
+                       trimmed alignment. This method allows to find
+                       'local-like' alignments between ESS of different
+                       size''')
     # DB alignment
     dbp = subparsers.add_parser('dbalign',
                                 help='ESSs database(s) alignment using DP')
@@ -185,7 +197,15 @@ def arg_parser(get_parser=False):
                      It can be created more processes than cores in the
                      the processor, so the speedup of the analysis
                      depends on the number of cores available''')
-    # TO DO ..
+    dbp.add_argument('-l', '--localize', action='store_true', default=False,
+                     help='''The alignment is trimmed to the coverage of the
+                     shortest ESS and the score is then calculated to the
+                     trimmed alignment. This method allows to find
+                     'local-like' alignments between ESS of different
+                     size''')
+    ##############
+    # # TO DO .. #
+    ##############
     dbp.add_argument('-align', action='store_true',
                      help='''If set, the outputfile contains the alignment
                      of each ESS pair bellow the threshold. Beware, if the
@@ -306,7 +326,8 @@ def main_pair(args):
     """Main function for pair subcommand
     """
     from sys import stdout
-    seq1, seq2, score = alignESS(args.ess1, args.ess2, gap=args.gap)
+    seq1, seq2, score = alignESS(args.ess1, args.ess2, gap=args.gap,
+                                 localize=args.localize)
     stdout.write('ess1:\t{}\n'.format(seq1))
     stdout.write('ess2:\t{}\n'.format(seq2))
     stdout.write('score = {}\n'.format(score))
@@ -336,7 +357,7 @@ def main_db(args):
         print('Number of processes: {}'.format(args.nproc))
         scores = nwx.alldb_comp(db1, hmat, decs, thres=args.threshold,
                                 nproc=args.nproc,
-                                # localize=args.localize,
+                                localize=args.localize,
                                 )
         print('------ Storing data:', args.outfile)
         nwx.store_dict(args.outfile, scores, indices=indices, indices2=indices)
@@ -347,7 +368,7 @@ def main_db(args):
         print('Number of processes: 1 (fixed)')
         ess = args.essdb1.split(':')
         scores = nwx.seq_vs_db(ess, db2, hmat, decs, thres=args.threshold,
-                               # localize=args.localize
+                               localize=args.localize
                                )
         print('------ Storing data:', args.outfile)
         print('Number of hits: ', len(scores))
@@ -363,7 +384,7 @@ def main_db(args):
         print('Number of processes: {}'.format(args.nproc))
         scores = nwx.db_vs_db(db1, db2, hmat, decs, thres=args.threshold,
                               nproc=args.nproc,
-                              # localize=args.localize
+                              localize=args.localize
                               )
         print('------ Storing data:', args.outfile)
         nwx.store_dict(args.outfile, scores, indices=ind1, indices2=ind2)
