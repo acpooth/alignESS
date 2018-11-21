@@ -208,8 +208,14 @@ def test_dbvsdb_len(seqs, decs, hmat):
     subs2 = seqs[20:60]
     n2 = len(subs2)
     scores = nwx.db_vs_db(subs1, subs2, hmat, decs)
+    aligns = nwx.db_vs_db(subs1, subs2, hmat, decs,
+                          oscore=False)
     assert len(scores) == n1
     assert len(scores[0]) == n2
+    # oscore=False
+    assert len(scores) == len(aligns)
+    assert len(scores[0]) == len(aligns[0])
+    # threshold
     sco_thres = nwx.db_vs_db(subs1, subs2, hmat, decs,
                              thres=0.3)
     assert len(sco_thres) < n1
@@ -237,6 +243,11 @@ def test_listvsalldb_len(seqs, decs, hmat):
     assert len(scores) == 3
     assert len(scores[10]) < 89
     assert len(scores[80]) < 19
+    aligns = nwx.list_vs_alldb(indices, subs, hmat, decs, thres=0.3,
+                               oscore=False)
+    assert len(aligns) == 3
+    assert len(aligns[10]) < 89
+    assert len(aligns[80]) < 19
 
     scoreswhole = nwx.list_vs_alldb(indices, subs, hmat, decs, wholedb=True,
                                     thres=0.3)
@@ -247,7 +258,7 @@ def test_listvsalldb_len(seqs, decs, hmat):
 
 @skipifnotfiles
 def test_localize_len(seqs, decs, hmat):
-    """Test that the option localize generates more resultes
+    """Test that the option localize generates more results
     than the normal option"""
     # alldb comp
     r1 = nwx.alldb_comp(seqs, hmat, decs, thres=0.3)

@@ -483,7 +483,9 @@ def seq_vs_db(list seq1, list seqs, np.ndarray[DTYPEF_t, ndim=2] mat, dict decs,
     return resdict
 
 
-def db_vs_db(seqs1, seqs2, mat, decs, thres=1.0, localize=False, nproc=2):
+def db_vs_db(list seqs1, list seqs2, np.ndarray[DTYPEF_t, ndim=2] mat,
+             dict decs, float thres=1.0, bool localize=False,
+             bool oscore=True, int nproc=2):
     """Align all the ESS in both databases (seqs1, seqs2). The result
     is a dictionary of dictionaries. The fist key representes the index
     in of the ESS in the first database; the second key is the index of
@@ -503,12 +505,15 @@ def db_vs_db(seqs1, seqs2, mat, decs, thres=1.0, localize=False, nproc=2):
                 made only in the part of the alignment covered by 
                 the shortest ESS (default False)
     nproc    -- Number of cores to use (default 2)
+    oscore   -- Bool. If True, returns only the score of the alignment 
+                otherwise, returns a tuple with the algined ESSs and
+                the corresonding score (defautl True)
     """
     cdef:
         dict resdic = {}
     pool = Pool(processes=nproc)
     align_func = partial(seq_vs_db, seqs=seqs2, mat=mat, decs=decs, thres=thres,
-                         localize=localize)
+                         localize=localize, oscore=oscore)
     resd = pool.map(align_func, seqs1)
     for i in range(len(resd)):
         d = resd[i]
@@ -519,7 +524,8 @@ def db_vs_db(seqs1, seqs2, mat, decs, thres=1.0, localize=False, nproc=2):
 
 
 def alldb_comp(list seqs, np.ndarray[DTYPEF_t, ndim=2] mat, dict decs,
-               float thres=1.0, bool localize=False, int nproc=2):
+               float thres=1.0, bool localize=False, bool oscore=True,
+               int nproc=2):
     """Align all the ESS in the database (seqs) and return the results in form 
     of dictionary. The result is equivalent to the upper part the all vs all 
     comparisson matrix.
@@ -536,6 +542,9 @@ def alldb_comp(list seqs, np.ndarray[DTYPEF_t, ndim=2] mat, dict decs,
     localize -- Score the alignment in the segment covered by te smallest ESS 
                 (default False)
     nproc    -- Number of cores to use (default 2)
+    oscore   -- Bool. If True, returns only the score of the alignment 
+                otherwise, returns a tuple with the algined ESSs and
+                the corresonding score (defautl True)
     """
     cdef:
         indices = list(range(len(seqs)))
@@ -544,7 +553,7 @@ def alldb_comp(list seqs, np.ndarray[DTYPEF_t, ndim=2] mat, dict decs,
         dict result = {}
     pool = Pool(processes=nproc)
     align_func = partial(ind_vs_alldb, mat=mat, decs=decs, seqs=seqs,
-                         thres=thres, localize=localize)
+                         thres=thres, localize=localize, oscore=oscore)
     resd = pool.map(align_func, indices, chunksize=nproc)
 
     for d in resd:
@@ -554,7 +563,7 @@ def alldb_comp(list seqs, np.ndarray[DTYPEF_t, ndim=2] mat, dict decs,
 
 def list_vs_alldb(list indices, list seqs, np.ndarray[DTYPEF_t, ndim=2] mat,
                   dict decs, float thres=1.0, bool localize=False,
-                  bool wholedb=False, int nproc=2):
+                  bool wholedb=False, bool oscore=False, int nproc=2):
     """Align all the ESS in the database (seqs) and return the results in form 
     of dictionary. The result is equivalent to the upper part the all vs all 
     comparisson matrix.
@@ -573,6 +582,9 @@ def list_vs_alldb(list indices, list seqs, np.ndarray[DTYPEF_t, ndim=2] mat,
                 (default False)
     wholedb  -- Bool, If True, the ind ESS is compared against all the sequences
                 stored in seqs list.
+    oscore   -- Bool. If True, returns only the score of the alignment 
+                otherwise, returns a tuple with the algined ESSs and
+                the corresonding score (defautl True)
     nproc    -- Number of cores used (default 2)
     """
     cdef:
@@ -581,7 +593,8 @@ def list_vs_alldb(list indices, list seqs, np.ndarray[DTYPEF_t, ndim=2] mat,
         dict result = {}
     pool = Pool(processes=nproc)
     align_func = partial(ind_vs_alldb, mat=mat, decs=decs, seqs=seqs,
-                         thres=thres, localize=localize, wholedb=wholedb)
+                         thres=thres, localize=localize, wholedb=wholedb,
+                         oscore=oscore)
     resd = pool.map(align_func, indices, chunksize=nproc)
 
     for d in resd:
