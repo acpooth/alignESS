@@ -365,6 +365,17 @@ def test_localize_parser():
     alignESS.main_db(args)
 
 
+def test_dbalign_align_option():
+    """Test that the align option returns True or False correctly"""
+    parser = alignESS.arg_parser(get_parser=True)
+    # dbalign
+    args = parser.parse_args(['dbalign', 'tests/nr_part.db'])
+    assert args.align is False
+    args = parser.parse_args(['dbalign', 'tests/nr_part.db', '-align'])
+    assert args.align is True
+    alignESS.main_db(args)
+
+
 @skipifnotfiles
 def test_singledb():
     """Using only one database yielded an error because the program tries

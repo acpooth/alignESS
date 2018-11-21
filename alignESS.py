@@ -144,10 +144,12 @@ def arg_parser(get_parser=False):
     """If parser == True,  the program retunr parser obhect"""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('-m', '--matrix', default='h_ent_mat.npz',
-                        help='EC number similarity matrix (TO DO)[h_ent_mat.npz]')
+                        help='''EC number similarity matrix
+                        (TO DO)[h_ent_mat.npz]''')
     parser.add_argument('--gap', type=float, default=0.9,
                         help='Gap penalization (from 0 to 1) [0.9]')
-    # parser '-c', '--create-matrix', 'create matrix given a list of ec numbers'
+    # TO DO parser -c, --create-matrix,
+    # 'create matrix given a list of ec numbers'
     ##############
     # Subparsers #
     ##############
@@ -155,7 +157,7 @@ def arg_parser(get_parser=False):
                                        dest='command')
     # Pair alignment
     pairp = subparsers.add_parser('pair',
-                                  help='''ESS command line pairwise 
+                                  help='''ESS command line pairwise
                                   comparisson using DP''')
     pairp.add_argument('ess1', type=str,
                        help='''ESS (3 levels EC numbers). Colon separated.
@@ -185,8 +187,8 @@ def arg_parser(get_parser=False):
     dbp.add_argument('-o', '--outfile', type=str,  default='output.txt',
                      help="""Outfile name to report scores. By default the
                      file only contains the id of the ESSs and the score
-                     of the alignment. (TO DO ->>If argument '-align' is set, then
-                     the file contains the alignment of ESSs)""")
+                     of the alignment. If argument '-align' is set,
+                     then the file contains the alignmed ESSs""")
     dbp.add_argument('-t', '--threshold', type=float, default=0.3,
                      help='''Threshold score to filter results in the
                      range 0-1 [0.3]. If the threshold is high (>0.6) and
@@ -203,14 +205,11 @@ def arg_parser(get_parser=False):
                      trimmed alignment. This method allows to find
                      'local-like' alignments between ESS of different
                      size''')
-    ##############
-    # # TO DO .. #
-    ##############
-    dbp.add_argument('-align', action='store_true',
+    dbp.add_argument('-align', action='store_true', default=False,
                      help='''If set, the outputfile contains the alignment
                      of each ESS pair bellow the threshold. Beware, if the
-                     databases are large, the file may be huge (TO DO)''')
-    # localize argument
+                     databases are large and the threshold high,
+                     the file may be huge or the RAM memmory colapse.''')
     # Multiple Alignment
     multip = subparsers.add_parser('multi',
                                    help='ESSs multiple alignment using GA')
@@ -343,6 +342,10 @@ def main_db(args):
         typ2 = _ess_type(args.essdb2)
         assert typ2 != 'ess', '-db2 must be a database, not an ESS'
         print(args.essdb2, '(', typ2, ')')
+    if args.align is True:
+        oscore = False
+    else:
+        oscore = True
     # Checking types
     if not args.essdb2:
         if typ1 == 'ess':
@@ -358,6 +361,7 @@ def main_db(args):
         scores = nwx.alldb_comp(db1, hmat, decs, thres=args.threshold,
                                 nproc=args.nproc,
                                 localize=args.localize,
+                                oscore=oscore
                                 )
         print('------ Storing data:', args.outfile)
         nwx.store_dict(args.outfile, scores, indices=indices, indices2=indices)
@@ -368,7 +372,8 @@ def main_db(args):
         print('Number of processes: 1 (fixed)')
         ess = args.essdb1.split(':')
         scores = nwx.seq_vs_db(ess, db2, hmat, decs, thres=args.threshold,
-                               localize=args.localize
+                               localize=args.localize,
+                               oscore=oscore
                                )
         print('------ Storing data:', args.outfile)
         print('Number of hits: ', len(scores))
@@ -384,7 +389,8 @@ def main_db(args):
         print('Number of processes: {}'.format(args.nproc))
         scores = nwx.db_vs_db(db1, db2, hmat, decs, thres=args.threshold,
                               nproc=args.nproc,
-                              localize=args.localize
+                              localize=args.localize,
+                              oscore=oscore
                               )
         print('------ Storing data:', args.outfile)
         nwx.store_dict(args.outfile, scores, indices=ind1, indices2=ind2)
@@ -466,9 +472,9 @@ def main():
     elif args.command is None:
         parser = arg_parser(True)
         parser.print_help()
+    print('>>> Done!!! <<<')
+    print(':D, see you soon.')
 
 
 if __name__ == '__main__':
     main()
-    print('>>> Done!!! <<<')
-    print(':D, see you soon.')

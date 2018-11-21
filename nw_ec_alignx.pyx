@@ -75,8 +75,8 @@ def _FastNW(np.ndarray[DTYPEF_t, ndim=2] mat, dict ecs, list seq1, list seq2,
     mini = 0
     l1, l2 = len(seq1), len(seq2)
     # Create the score and arrow matrices
-    cdef np.ndarray[DTYPEF_t, ndim = 2] scoremat = np.zeros((l1 + 1, l2 + 1), DTYPEF)
-    cdef np.ndarray[DTYPE_t, ndim = 2] arrow = np.zeros((l1 + 1, l2 + 1), DTYPE)
+    cdef np.ndarray[DTYPEF_t, ndim= 2] scoremat = np.zeros((l1 + 1, l2 + 1), DTYPEF)
+    cdef np.ndarray[DTYPE_t, ndim= 2] arrow = np.zeros((l1 + 1, l2 + 1), DTYPE)
     # Create first row and first column with gaps
     for i in range(l2 + 1):
         scoremat[0, i] = i * gap
@@ -689,17 +689,23 @@ def store_dict(fname, rdict, indices=None, indices2=None):
     testval = list(rdict.values())[0]
     if type(testval) == float and not indices:
         for i, sco in rdict.items():
+            if type(sco) is tuple:
+                sco = f"{sco[2]}\t{sco[0]}\t{sco[1]}"
             line = '{}\t{}\n'.format(i, sco)
             outf.write(line)
     elif type(testval) == float:
         for i, sco in rdict.items():
             i = indices[i]
+            if type(sco) is tuple:
+                sco = f"{sco[2]}\t{sco[0]}\t{sco[1]}"
             line = '{}\t{}\n'.format(i, sco)
             outf.write(line)
 
     elif not indices and not indices2:
         for i, dic in rdict.items():
             for j, sco in dic.items():
+                if type(sco) is tuple:
+                    sco = f"{sco[2]}\t{sco[0]}\t{sco[1]}"
                 line = '{}\t{}\t{}\n'.format(i, j, sco)
                 outf.write(line)
     elif indices and not indices2:
@@ -707,6 +713,8 @@ def store_dict(fname, rdict, indices=None, indices2=None):
             for j, sco in dic.items():
                 ind1 = indices[i]
                 ind2 = j
+                if type(sco) is tuple:
+                    sco = f"{sco[2]}\t{sco[0]}\t{sco[1]}"
                 line = '{}\t{}\t{}\n'.format(ind1, ind2, sco)
                 outf.write(line)
     elif not indices and indices2:
@@ -714,6 +722,8 @@ def store_dict(fname, rdict, indices=None, indices2=None):
             for j, sco in dic.items():
                 ind1 = i
                 ind2 = indices2[j]
+                if type(sco) is tuple:
+                    sco = f"{sco[2]}\t{sco[0]}\t{sco[1]}"
                 line = '{}\t{}\t{}\n'.format(ind1, ind2, sco)
                 outf.write(line)
     else:
@@ -721,6 +731,8 @@ def store_dict(fname, rdict, indices=None, indices2=None):
             for j, sco in dic.items():
                 ind1 = indices[i]
                 ind2 = indices2[j]
+                if type(sco) is tuple:
+                    sco = f"{sco[2]}\t{sco[0]}\t{sco[1]}"
                 line = '{}\t{}\t{}\n'.format(ind1, ind2, sco)
                 outf.write(line)
     outf.close()
