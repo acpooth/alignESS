@@ -163,6 +163,7 @@ def test_indvsalldb_len(seqs, decs, hmat):
     """
     subs = seqs[:100]
     scores0 = nwx.ind_vs_alldb(0, subs, hmat, decs)
+    aligns0 = nwx.ind_vs_alldb(0, subs, hmat, decs, oscore=False)
     scores89 = nwx.ind_vs_alldb(89, subs, hmat, decs)
     scoreswhole = nwx.ind_vs_alldb(89, subs, hmat, decs, wholedb=True)
     assert len(scores0) == 1
@@ -171,6 +172,12 @@ def test_indvsalldb_len(seqs, decs, hmat):
     assert len(scores0[0]) == 99
     assert len(scores89[89]) == 10
     assert len(scoreswhole[89]) == 100
+    # oscore = False result length
+    assert len(aligns0) == len(scores0)
+    aln = list(list(aligns0.values())[0].values())[0]
+    assert len(aln) == 3
+    assert type(aln[0]) is str
+    assert type(aln[2]) is float
 
 
 @skipifnotfiles
@@ -180,9 +187,16 @@ def test_seqvsdb_len(seqs, decs, hmat):
     n = len(subs)
     seq1 = seqs[50]
     scores = nwx.seq_vs_db(seq1, subs, hmat, decs)
+    aligns = nwx.seq_vs_db(seq1, subs, hmat, decs, oscore=False)
     assert len(scores) == n
     sco_thres = nwx.seq_vs_db(seq1, subs, hmat, decs, thres=0.3)
     assert len(sco_thres) < n
+    # oscore = False result lenght
+    assert len(scores) == len(aligns)
+    aln = list(aligns.values())[0]
+    assert len(aln) == 3
+    assert type(aln[0]) is str
+    assert type(aln[2]) is float
 
 
 @skipifnotfiles

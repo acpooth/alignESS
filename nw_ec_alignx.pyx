@@ -406,7 +406,7 @@ def NW(np.ndarray[DTYPEF_t, ndim=2] mat, dict ecs, list seq1, list seq2,
 
 def ind_vs_alldb(int ind, list seqs, np.ndarray[DTYPEF_t, ndim=2] mat,
                  dict decs, float thres=1.0, bool wholedb=False,
-                 bool localize=False):
+                 bool localize=False, bool oscore=True):
     """Align the ESSs in the specified index (ind) versus
 all the rest of sequences with index > ind.
 
@@ -422,12 +422,15 @@ all the rest of sequences with index > ind.
     localize -- Bool. If True, the scoring of the alignment will be 
                 made only in the part of the alignment covered by 
                 the shortest ESS (default False)
+    oscore   -- Bool. If True, returns only the score of the alignment 
+                otherwise, returns a tuple with the algined ESSs and
+                the corresonding score (defautl True)
     """
     cdef:
         dict resdic = {ind: {}}
         list seq1, seq2
         int j
-        float sco
+        # float sco
     seq1 = seqs[ind]
     if wholedb:
         indices = range(len(seqs))
@@ -435,14 +438,19 @@ all the rest of sequences with index > ind.
         indices = range(ind + 1, len(seqs))
     for j in indices:
         seq2 = seqs[j]
-        sco = NW(mat, decs, seq1, seq2, oscore=True,
+        sco = NW(mat, decs, seq1, seq2, oscore=oscore,
                  localize=localize)
-        if sco <= thres:
-            resdic[ind][j] = sco
+        if oscore:
+            if sco <= thres:
+                resdic[ind][j] = sco
+        else:
+            if sco[2] <= thres:
+                resdic[ind][j] = sco
     return resdic
 
 
-def seq_vs_db(seq1, seqs, mat, decs, thres=1.0, localize=False):
+def seq_vs_db(list seq1, list seqs, np.ndarray[DTYPEF_t, ndim=2] mat, dict decs,
+              float thres=1.0, bool localize=False, bool oscore=True):
     """Align de specified ESSs vs all the ESS in the database seqs. 
     Returns a dictionary with the scores. The keys are the index of
     the sequenc in database (seqs) and the values are ths scores.
@@ -457,13 +465,21 @@ def seq_vs_db(seq1, seqs, mat, decs, thres=1.0, localize=False):
     localize -- Bool. If True, the scoring of the alignment will be 
                 made only in the part of the alignment covered by 
                 the shortest ESS (default False)
+    oscore   -- Bool. If True, returns only the score of the alignment 
+                otherwise, returns a tuple with the algined ESSs and
+                the corresonding score (defautl True)
     """
-    resdict = {}
+    cdef:
+        dict resdict = {}
     for i in range(len(seqs)):
         seq2 = seqs[i]
-        sco = NW(mat, decs, seq1, seq2, oscore=True, localize=localize)
-        if sco <= thres:
-            resdict[i] = sco
+        sco = NW(mat, decs, seq1, seq2, oscore=oscore, localize=localize)
+        if oscore:
+            if sco <= thres:
+                resdict[i] = sco
+        else:
+            if sco[2] <= thres:
+                resdict[i] = sco
     return resdict
 
 
