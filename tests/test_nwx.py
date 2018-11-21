@@ -156,6 +156,7 @@ def test_alignESS_wrap():
 # Testing multiple comparissons #
 #################################
 
+@skipifnotfiles
 def test_indvsalldb_len(seqs, decs, hmat):
     """Test for the correct length of ind_vs_alldb
 
@@ -172,6 +173,7 @@ def test_indvsalldb_len(seqs, decs, hmat):
     assert len(scoreswhole[89]) == 100
 
 
+@skipifnotfiles
 def test_seqvsdb_len(seqs, decs, hmat):
     """Test for the correct length output in seqs_vs_db output"""
     subs = seqs[:100]
@@ -183,6 +185,7 @@ def test_seqvsdb_len(seqs, decs, hmat):
     assert len(sco_thres) < n
 
 
+@skipifnotfiles
 def test_dbvsdb_len(seqs, decs, hmat):
     """Test for the correct length in db_vs_db output
     """
@@ -200,6 +203,7 @@ def test_dbvsdb_len(seqs, decs, hmat):
     assert len(sco_thres[i]) < n2
 
 
+@skipifnotfiles
 def test_listvsalldb_len(seqs, decs, hmat):
     """Test for the correct length in list_vs_alldb output
     """
@@ -227,9 +231,25 @@ def test_listvsalldb_len(seqs, decs, hmat):
     assert len(scoreswhole[80]) < 100
 
 
+@skipifnotfiles
+def test_localize_len(seqs, decs, hmat):
+    """Test that the option localize generates more resultes
+    than the normal option"""
+    # alldb comp
+    r1 = nwx.alldb_comp(seqs, hmat, decs, thres=0.3)
+    r2 = nwx.alldb_comp(seqs, hmat, decs, thres=0.3,
+                        localize=True)
+    s1 = [s for sub in r1.values() for s in sub.values()]
+    s2 = [s for sub in r2.values() for s in sub.values()]
+    n1 = len(s1)
+    n2 = len(s2)
+    assert n1 < n2
+    assert sum(s1) / n1 > sum(s2) / n2
+
 ###############
 # Testing I/O #
 ###############
+
 
 @skipifnotfiles
 def test_loadtxt():
