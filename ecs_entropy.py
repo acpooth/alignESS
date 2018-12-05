@@ -188,19 +188,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-    # from getEC3fromDB import EClist
-    # import sqlite3 as s3
-    # from sys import argv
-
-    # db = s3.connect(argv[1])
-
-    # ecs = EClist(db)
-
-    # # No hierarchy
-    # mat = build_entropy_matrix(ecs, function=0)
-    # # Hierarchy
-    # hmat = build_entropy_matrix(ecs, function=1)
-
-    # # sabe matrices
-    # save_matrix(mat, ecs, 'entropy_matrix')
-    # save_matrix(hmat, ecs, 'entropy_matrix_hierarchy')
