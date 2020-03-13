@@ -1,0 +1,7 @@
+{
+  "test_nwx.py::test_dbvsdb_len": true,
+  "test_nwx.py::test_indvsalldb_len": true,
+  "test_nwx.py::test_listvsalldb_len": true,
+  "test_nwx.py::test_scoring": true,
+  "test_nwx.py::test_seqvsdb_len": true
+}

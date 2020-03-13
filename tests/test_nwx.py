@@ -21,7 +21,7 @@ from random import choice
 mod_path = os.path.abspath(__file__)
 mod_path = os.path.dirname(mod_path)
 sys.path.insert(0, mod_path + '/../')
-# --End Fixing path fro pytest
+# --End Fixing path for pytest
 pyximport = pytest.importorskip('pyximport')
 alignESS = pytest.importorskip('alignESS')
 try:
