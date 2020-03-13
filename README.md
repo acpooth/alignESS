@@ -23,7 +23,7 @@ The program runs in Python 3. It runs properly in an Anaconda base installation!
 * Multiple alignment:
     - C boost library: only for compiling the alignment algorithm*
  
-(*) This repo contains a compiled (linux 64 bit) copy of the multiple alingment algorithm that may work fine in
+(*) This repo contains a compiled (linux 64 bit) copy of the multiple alignment algorithm that may work fine in
  the majority of linux systems. The source code of this part of the program is not yet included.
 
 ## Installing
