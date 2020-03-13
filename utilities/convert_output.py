@@ -76,7 +76,11 @@ def main():
             continue
         line = line.split('\t')
         if count == 1:
-            assert len(line) == 5, "Inappropriate number of columns."
+            if len(line) != 5:
+                print('[WARN] Wrong input file format.')
+                print('[INFO] Did you use the -align option to create the inputfile?')
+                print('[WARN] Exiting program!!!')
+                exit()
         id1, id2, s, ess1, ess2 = line
         # unaligned sequences
         ess1un = remove_gaps(ess1)
