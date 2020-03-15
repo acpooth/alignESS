@@ -28,10 +28,29 @@ The program runs in Python 3. It runs properly in an Anaconda base installation!
 
 ## Installing
 
-For now, clone this git repository and use the alginESS.py script...(_under construction_)
+For now, clone this git repository and use the alginESS.py script.
 
 
 ## Usage.
+
+### Enzimatic Step Sequences (ESS)
+
+The ESSs represent lineal consecutive steps of enzymatic activities. These steps are represented using the
+Enzyme Commission (EC) numbers that describe catalytic function. Thus, the ESS are a form of functional representation
+of a metabolic processes. In this case, only the first 3 numbers are considered, because in general seems to be
+more informative and tends to be less prone to annotation issues.
+
+The ESS can be obtained in any way, but must have the following form:
+
+    1. Each enzime is represented by a 3 digit EC number: 3.1.4. 
+	   Invalid numbers (i.e. inexistent in KEGG database) will rise error.
+	2. The sequence (ESS) is constructed joining the enzimes using colons (:).
+	   In this form (a 3 step ESS): 3.2.4:1.6.12:4.4.1
+	3. An undetermined enzymatic setp must be specified in this form: 9.9.9
+
+The program accepts ESS written on the terminal, in a text file or in a Sqlite database. Examples of each
+type of file can be found in the test folder in this repo.
+
 
 ### Pair-wise alignment.
 
@@ -49,7 +68,7 @@ For now, clone this git repository and use the alginESS.py script...(_under cons
                        This method allows to find 'local-like' alignments between
                        ESS of different size
 
-ess1 and ess2 must be strings
+ess1 and ess2 must be ESS written in the command line.
 
 
 ### Pair-wise database alginment.
@@ -94,7 +113,8 @@ ess1 and ess2 must be strings
                              databases are large and the threshold high, the file
                              may be huge or the RAM memmory colapse.
 
-essdb1, essdb2 can be text files or sqlite databases (with specific format --coming soon--)
+essdb1, essdb2 can be text files or sqlite databases (with specific format --coming soon--). Examples
+can be found in test folder
 
 
 ### Multiple alignment
@@ -113,9 +133,9 @@ essdb1, essdb2 can be text files or sqlite databases (with specific format --com
                              If spificied, stores the pairwise comparisson of the
                              ESSs in the ESSs file
      
-File name must be a text file...
+File name must be a text file. An example can be found in test folder.
 
-__UNDER CONSTRUCTION__
+More info coming soon...!!!
 
 
 ## Papers.
