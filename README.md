@@ -12,11 +12,12 @@ The pairwise alignments are generated with the DP algorithm, and the multiple ES
 
 ## Dependencies
 
-The program runs in Python 3. It runs properly in an Anaconda base installation! (that includes numpy, matplotib, cython and pytest).
+The program runs in Python 3. It runs properly in an Anaconda base installation! (that includes numpy, sqlite, matplotib, cython and pytest).
 
 * Pair-wise alignment (simple pairwise or database alignment):
     - cython
     - numpy
+	- sqlite3
     - matplotlib [optional] only for ecs_entropy.py script
 	- pytest [optional] for running test suite
 
