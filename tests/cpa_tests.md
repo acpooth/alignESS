@@ -11,9 +11,8 @@
 | alignESS.py dbalign -db2 multi.txt   nr\_part.db | [Error][1] |
 | alignESS.py dbalign -db2 random_frag.txt -nproc 4 -align -t 0.7   nr\_part.db | OK |
 | alignESS.py multi multi.txt | OK | 
-| test\_nwx.py | [OK][2] 
-
-## Errores 
+| pytest | [OK][2] |
+ 
 
 [1]: Error relacionado a que __multi.txt__ tiene texto antes de los códigos nùmericos 
 
