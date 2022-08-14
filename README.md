@@ -26,6 +26,12 @@ The program runs in Python 3. It runs properly in an Anaconda base installation!
  
 (*) This repo contains a compiled (linux 64 bit) copy of the multiple alignment algorithm that may work fine in
  the majority of linux systems. The source code of this part of the program is not yet included.
+ 
+For convenience a conda environment can be build to fullfill all dependencies with the  conda .yml file in this repo
+
+``` Bash
+$ conda create env -f conda_env.yml
+```
 
 ## Installing
 
@@ -53,6 +59,7 @@ The program accepts ESS written on the terminal, in a text file or in a Sqlite d
 type of file can be found in the test folder in this repo.
 
 
+
 ### Pair-wise alignment.
 
      usage: alignESS.py pair [-h] [-l] ess1 ess2
@@ -70,6 +77,19 @@ type of file can be found in the test folder in this repo.
                        ESS of different size
 
 ess1 and ess2 must be ESS written in the command line.
+
+#### Example
+
+``` Bash
+(ess-env) $ python3 alignESS.py pair 2.7.1:5.3.1:5.3.1:2.7.1:4.1.2:1.2.1 5.3.1:5.3.1:4.2.1
+<r 2.7.1:5.3.1:5.3.1:2.7.1:4.1.2:1.2.1 5.3.1:5.3.1:4.2.1
+ess1:	2.7.1:5.3.1:5.3.1:2.7.1:4.1.2:1.2.1
+ess2:	-.-.-:5.3.1:5.3.1:-.-.-:4.2.1:-.-.-
+score = 0.566987156867981
+>>> Done!!! <<<
+:D, see you soon.
+``` 
+
 
 
 ### Pair-wise database alginment.
