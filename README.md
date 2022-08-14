@@ -221,8 +221,7 @@ multiout.txt
 A __multioutput.txt__ file will be created and should look like this 
 
 ``` Bash
-(ess-env) $ 
-head multiout.txt 
+(ess-env) $ head multiout.txt 
 006 Glycolysis / Gluconeogenesis	2.7.1:5.3.1:5.3.1:2.7.1:4.1.2:1.2.1
 016 Glycolysis / Gluconeogenesis	3.1.3:2.7.1:5.3.1:5.3.1:2.7.1:4.1.2:1.2.1
 019 Glycolysis / Gluconeogenesis	-.-.-:2.7.1:3.2.1:5.3.1:2.7.1:4.1.2:1.2.1
@@ -231,7 +230,7 @@ head multiout.txt
 008 Glycolysis / Gluconeogenesis	-.-.-:-.-.-:5.4.2:5.3.1:2.7.1:4.1.2:1.2.1
 225 Phenylalanine, tyrosine and tryptophan biosynthesis	-.-.-:-.-.-:-.-.-:5.3.1:5.3.1:4.2.1:4.2.1
 224 Phenylalanine, tyrosine and tryptophan biosynthesis	-.-.-:-.-.-:-.-.-:5.3.1:5.3.1:4.2.1:-.-.-
-# Fitness: 0.269401
+\# Fitness: 0.269401
 ```
 
 
