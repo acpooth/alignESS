@@ -187,8 +187,6 @@ An __output.txt__ file will be created and should look like this
      
 File name must be a text file. An example can be found in test folder.
 
-More info coming soon...!!!
-
 
 #### Example
 
