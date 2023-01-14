@@ -1,6 +1,5 @@
 #!/usr/bin/python
 #
-#
 # @uthor: acph (dragopoot@gmail.com)
 #
 

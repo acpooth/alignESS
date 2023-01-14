@@ -11,7 +11,7 @@
 # Copyright:   (c) acph 2016
 # Licence:     GNU GENERAL PUBLIC LICENSE, Version 3, 29 June 2007
 # ------------------------------
-""" """
+"""DON't use Old utility script for recreating alignments for a list of EC ids and socores"""
 
 outf = open('alignments_localize.txt', 'w')
 
