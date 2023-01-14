@@ -139,6 +139,34 @@ File name must be a text file. An example can be found in test folder.
 More info coming soon...!!!
 
 
+### Updating the EC scoring matrix for pairwise alignment.
+
+The scoring (dissimilarity) matrix used by the pairwise alignment program can be updated
+using the script ecs_entropy.py. This script creates the matrix on a python binary file,
+however, the program can also store the matrix in text format and plot it in a *png* file.
+
+In order to create the matrix, first is necessary to download the KEGG EC number list from
+this URL: [http://rest.kegg.jp/list/ec](http://rest.kegg.jp/list/ec)
+
+    usage: ecs_entropy.py [-h] [-s npz|txt] [-p] ecfile
+    
+    Create an entropy based similarity (distance) matrix for EC alignment. The similarity is
+    calculated for the first 3 levels of EC classification
+    
+    positional arguments:
+      ecfile                KEGG EC numbers list. This file can be downloaded with this link:
+                            http://rest.kegg.jp/list/ec
+    
+    options:
+      -h, --help            show this help message and exit
+      -s npz|txt, --store-format npz|txt
+                            Output file format. The default (npz) format is as numpy binary file
+                            that can be used by the ESS alignment program. txt option gets a
+                            tabular separated text file
+      -p, --plot            Plot the matrix in ent_matrix.png file
+    
+
+
 ## Papers.
 The programs presented here were used all or in parts in the following papers.
 
