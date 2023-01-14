@@ -12,7 +12,7 @@ The pairwise alignments are generated with the DP algorithm, and the multiple ES
 
 ## Dependencies
 
-The program runs in Python 3. It runs properly in an Anaconda base installation! (that includes numpy, sqlite, matplotib, cython and pytest).
+The program runs in Python 3. It runs properly in an Anaconda base installation! (that includes numpy, sqlite, matplotlib, cython and pytest).
 
 * Pair-wise alignment (simple pairwise or database alignment):
     - cython
@@ -26,6 +26,12 @@ The program runs in Python 3. It runs properly in an Anaconda base installation!
  
 (*) This repo contains a compiled (linux 64 bit) copy of the multiple alignment algorithm that may work fine in
  the majority of linux systems. The source code of this part of the program is not yet included.
+ 
+For convenience a conda environment can be build to fullfill all dependencies with the  conda .yml file in this repo
+
+``` Bash
+$ conda create env -f conda_env.yml
+```
 
 ## Installing
 
@@ -53,6 +59,7 @@ The program accepts ESS written on the terminal, in a text file or in a Sqlite d
 type of file can be found in the test folder in this repo.
 
 
+
 ### Pair-wise alignment.
 
      usage: alignESS.py pair [-h] [-l] ess1 ess2
@@ -71,6 +78,19 @@ type of file can be found in the test folder in this repo.
 
 ess1 and ess2 must be ESS written in the command line.
 
+#### Example
+
+``` Bash
+(ess-env) $ python3 alignESS.py pair 2.7.1:5.3.1:5.3.1:2.7.1:4.1.2:1.2.1 5.3.1:5.3.1:4.2.1
+```
+Output
+``` Bash
+ess1:	2.7.1:5.3.1:5.3.1:2.7.1:4.1.2:1.2.1
+ess2:	-.-.-:5.3.1:5.3.1:-.-.-:4.2.1:-.-.-
+score = 0.566987156867981
+>>> Done!!! <<<
+:D, see you soon.
+``` 
 
 ### Pair-wise database alginment.
 
@@ -117,6 +137,37 @@ ess1 and ess2 must be ESS written in the command line.
 essdb1, essdb2 can be text files or sqlite databases (with specific format --coming soon--). Examples
 can be found in test folder
 
+#### Example
+
+``` Bash
+(ess-env) $  python3 alignESS.py dbalign tests/nr_part.db
+
+```
+Output
+``` Bash
+------ Opening databases:
+tests/nr_part.db ( sqlite )
+------ Aligning the database with itself (all vs all)...
+Number of processes: 2
+------ Storing data: output.txt
+>>> Done!!! <<<
+:D, see you soon.
+```
+
+An __output.txt__ file will be created and should look like this 
+
+``` Bash
+(ess-env) $  head output.txt
+3	4	0.23749999701976776
+3	5	0.23749999701976776
+3	11	0.23749999701976776
+3	13	0.23749999701976776
+3	14	0.23749999701976776
+3	15	0.23749999701976776
+3	16	0.23749999701976776
+3	20	0.012179487384855747
+```
+
 
 ### Multiple alignment
 
@@ -136,7 +187,49 @@ can be found in test folder
      
 File name must be a text file. An example can be found in test folder.
 
-More info coming soon...!!!
+
+#### Example
+
+``` Bash
+(ess-env) $  python3 alignESS.py multi tests/multi.txt
+
+```
+Output
+``` Bash
+------ Loading file
+tests/multi.txt
+------ Making pairwise comparissons
+------ Building multiple alignment
+- Genetic algorithm parameters:
+Population: 100
+Max generations: 200
+Crossover prob: 0.7
+Mutation prob: 0.1
+- Objetive function parameters (must sum 1):
+Gap penalization: 0.05
+Homogeneity: 0.9
+Column increment penalization:0.05
+
+------ Creating file
+multiout.txt
+>>> Done!!! <<<
+:D, see you soon.
+```
+
+A __multioutput.txt__ file will be created and should look like this 
+
+``` Bash
+(ess-env) $ head multiout.txt 
+006 Glycolysis / Gluconeogenesis	2.7.1:5.3.1:5.3.1:2.7.1:4.1.2:1.2.1
+016 Glycolysis / Gluconeogenesis	3.1.3:2.7.1:5.3.1:5.3.1:2.7.1:4.1.2:1.2.1
+019 Glycolysis / Gluconeogenesis	-.-.-:2.7.1:3.2.1:5.3.1:2.7.1:4.1.2:1.2.1
+010 Glycolysis / Gluconeogenesis	-.-.-:5.4.2:5.3.1:5.3.1:2.7.1:4.1.2:1.2.1
+004 Glycolysis / Gluconeogenesis	-.-.-:2.7.1:-.-.-:5.3.1:2.7.1:4.1.2:1.2.1
+008 Glycolysis / Gluconeogenesis	-.-.-:-.-.-:5.4.2:5.3.1:2.7.1:4.1.2:1.2.1
+225 Phenylalanine, tyrosine and tryptophan biosynthesis	-.-.-:-.-.-:-.-.-:5.3.1:5.3.1:4.2.1:4.2.1
+224 Phenylalanine, tyrosine and tryptophan biosynthesis	-.-.-:-.-.-:-.-.-:5.3.1:5.3.1:4.2.1:-.-.-
+\# Fitness: 0.269401
+```
 
 
 ### Updating the EC scoring matrix for pairwise alignment.
